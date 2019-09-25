@@ -52,7 +52,7 @@ _LOGCONFIG = {
 from .preprocessing.data_handler import load_config_excel
 from .preprocessing.preprocessing import build_simulation
 
-from .solve import solve_GAMS
+#from .solve import solve_GAMS
 #
 #from .postprocessing.data_handler import get_sim_results, ds_to_df
 #from .postprocessing.postprocessing import get_result_analysis, get_indicators_powerplant, aggregate_by_fuel, CostExPost

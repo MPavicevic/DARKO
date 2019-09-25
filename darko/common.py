@@ -9,11 +9,11 @@ commons={}
 commons['TimeStep'] = '1h'
 
 # TODO DARKO technologies:
-commons['Technologies'] = []
+commons['Technologies'] = ['HOB','HP','EH']
 # List of renewable technologies:
-commons['tech_renewables'] = []
+commons['tech_renewables'] = ['ST','WH']
 # List of storage technologies:
-commons['tech_storage'] = []
+commons['tech_storage'] = ['STO']
 # List of CHP types:
 commons['types_CHP'] = []
 # DARKO fuels:
