@@ -188,6 +188,24 @@ def UnitBasedTable(plants,path,idx,zones,fallbacks=['Unit'],tablename='',default
         sys.exit(1)
     return out
 
+def define_parameter(sets_in, sets, value=0):
+    """
+    Function to define a DARKO parameter and fill it with a constant value
+
+    :param sets_in:     List with the labels of the sets corresponding to the parameter
+    :param sets:        dictionary containing the definition of all the sets (must comprise those referenced in sets_in)
+    :param value:       Default value to attribute to the parameter
+    """
+    if value == 'bool':
+        values = np.zeros([len(sets[setx]) for setx in sets_in], dtype='bool')
+    elif value == 0:
+        values = np.zeros([len(sets[setx]) for setx in sets_in])
+    elif value == 1:
+        values = np.ones([len(sets[setx]) for setx in sets_in])
+    else:
+        values = np.ones([len(sets[setx]) for setx in sets_in]) * value
+    return {'sets': sets_in, 'val': values}
+
 def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0, index_col=None, parse_dates=False):
     """
     Function that loads a csv sheet into a dataframe and saves a temporary pickle version of it.
@@ -248,9 +266,9 @@ def load_config_excel(ConfigFile,AbsPath=True):
     config['ReserveCalculation'] = sheet.cell_value(47, 2)
 
     # List of parameters for which an external file path must be specified:
-    params = ['Quantity - Demand Order', 'Quantity - Simple Order', 'Quantity - Block Order', 'Quantity - Flexible Order',
-              'Price - Demand Order', 'Price - Simple Order', 'Price - Block Order', 'Price - Flexible Order',
-              'Players - Demand Side', 'Players - Supply Side']
+    params = ['QuantityDemandOrder', 'QuantitySimpleOrder', 'QuantityBlockOrder', 'QuantityFlexibleOrder',
+              'PriceDemandOrder', 'PriceSimpleOrder', 'PriceBlockOrder', 'PriceFlexibleOrder',
+              'PlayersDemandSide', 'PlayersSupplySide']
     for i, param in enumerate(params):
         config[param] = sheet.cell_value(61 + i, 2)
 
