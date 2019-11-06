@@ -1,0 +1,2 @@
+,PowerCapacity,Unit,Zone,OrderType,Technology,Fuel,PriceBlockOrder,PriceFlexibleOrder,AccaptanceBlockOrdersMin,AvailabilityFactorFlexibleOrder
+THMS_OTH,30,HOBO_GAS,Z2,Flexible,THMS,OTH,,30,,1

@@ -1,0 +1,3 @@
+,PowerCapacity,Unit,Zone,OrderType,Technology,Fuel,PriceBlockOrder,PriceFlexibleOrder,AccaptanceBlockOrdersMin,AvailabilityFactorFlexibleOrder
+HOBO_GAS,100,HOBO_GAS,Z1,Simple,HOBO,BIO,,,,
+HOBO_BIO,50,HOBO_BIO,Z1,Block,HOBO,GAS,10,,0.5,
