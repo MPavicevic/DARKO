@@ -12,7 +12,8 @@ dependencies:
   - xarray >= 0.11
   - netcdf4
   - pyyaml
-  - pytestspyder
+  - pytest
+  - spyder
   - pip
   - pip:
     - gdxcc
