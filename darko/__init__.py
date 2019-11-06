@@ -2,13 +2,13 @@ import logging.config
 import os
 
 ## Sets the __version__ variable
-#from ._version import __version__
+from ._version import __version__
 from .common import commons
 
 #from .preprocessing.preprocessing import get_git_revision_tag
 #__gitversion__ = get_git_revision_tag()
 
-# Logging: # TODO: Parametrize in darkocli or external config
+# Logging: # TODO: Parametrize in darko cli or external config
 _LOGCONFIG = {
      "version": 1,
      "disable_existing_loggers": False,
