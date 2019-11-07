@@ -268,7 +268,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
     # List of parameters for which an external file path must be specified:
     params = ['QuantityDemandOrder', 'QuantitySimpleOrder', 'QuantityBlockOrder', 'QuantityFlexibleOrder',
               'PriceDemandOrder', 'PriceSimpleOrder', 'PriceBlockOrder', 'PriceFlexibleOrder',
-              'PlayersDemandSide', 'PlayersSupplySide']
+              'PlayersDemandSide', 'PlayersSupplySide', 'Interconnections','NTC']
     for i, param in enumerate(params):
         config[param] = sheet.cell_value(61 + i, 2)
 
@@ -284,7 +284,10 @@ def load_config_excel(ConfigFile,AbsPath=True):
                 config[param] = os.path.join(basefolder,config[param])
 
     config['default'] = {}
+    config['default']['Availability - Flexible Order'] = sheet.cell_value(64, 5) 
     config['default']['Price - Block Order'] = sheet.cell_value(67, 5)
+    config['default']['Price - Flexible Order'] = sheet.cell_value(68, 5) 
+    
 #
     # read the list of zones to consider:
     def read_truefalse(sheet, rowstart, colstart, rowstop, colstop):

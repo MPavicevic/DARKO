@@ -44,11 +44,12 @@ l           Lines                                /Z1Z2, Z2Z1/
 t           Technologies                         /HOBO, SOTH, THMS/
 tr(t)       Renewable technologies               /SOTH/
 f           Fuel types                           /GAS, BIO, OTH/
-s(t)        Storage Technologies                 /THMS/
+s(u)        Storage Technologies                 /THMS_OTH/
 h           Hours                                /h1*h3/
 i(h)        Subset of simulated hours for one iteration
 z(h)        Subset of all simulated hours
 sk          Sectors                              /REZ, IND/
+
 ;
 
 Alias(d,dd);
@@ -87,7 +88,7 @@ HOBO_GAS      0     0    0;
 Parameter AvailabilityFactorFlexibleOrder(u)         [%]      Accaptance ratio for block orders
 /THMS_OTH   1/;
 *Config
-Parameter Demand(d)                                [MW\u]   Maximum demand
+Parameter MaxDemand(d)                                [MW\u]   Maximum demand
 /D1 50
 ,D2 100
 ,D3 30/;
@@ -146,7 +147,10 @@ Table FlowMaximum(l,h)                 [MW]     Line limits
        h1   h2  h3
 Z1Z2   20   30  20
 Z2Z1   30   20  30;
-*FlowMinimum(l,h)                 [MW]     Minimum flow
+Table FlowMinimum(l,h)                 [MW]     Minimum flow
+       h1   h2  h3
+Z1Z2   0    0    0
+Z2Z1   0    0    0;
 
 Display
 u,
@@ -166,7 +170,7 @@ AvailabilityFactorSimpleOrder,
 AvailabilityFactorBlockOrder
 AvailabilityFactorFlexibleOrder,
 *Config,
-Demand,
+MaxDemand,
 Fuel,
 LocationDemandSide,
 LocationSupplySide,
@@ -180,6 +184,7 @@ Sector,
 Technology,
 LineNode,
 FlowMaximum
+FlowMinimum
 ;
 
 *===============================================================================
@@ -198,7 +203,7 @@ ClearingStatusOfFlexibleOrder(u,h) binary variable
 ;
 
 FREE VARIABLE
-TotalWelfare      total welfate  
+TotalWelfare      total welfate
 ;
 
 *===============================================================================
@@ -218,19 +223,20 @@ EQ_Blockorder_lb   define lower bound on block order
 EQ_Blockorder_ub   define uper bound on block order
 EQ_Flexibleorder   define flexible order constraints
 EQ_Flow_limits_upper define upper limit on flows between zones
+EQ_Flow_limits_lower define lower limit on flows between zones
 ;
 
 * Objective function
 EQ_Welfare ..
          TotalWelfare
          =E=
-         sum((d,h), AcceptanceRatioOfDemandOrders(d,h)*AvailabilityFactorDemandOrder(d,h)*Demand(d)*PriceDemandOrder(d,h))
+         sum((d,h), AcceptanceRatioOfDemandOrders(d,h)*AvailabilityFactorDemandOrder(d,h)*MaxDemand(d)*PriceDemandOrder(d,h))
          - sum((u,h), AcceptanceRatioOfSimpleOrders(u,h)*AvailabilityFactorSimpleOrder(u,h)*PowerCapacity(u)*PriceSimpleOrder(u,h))
          - sum((u,h), AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,h)*PowerCapacity(u)*PriceBlockOrder(u))
          - sum((u,h), ClearingStatusOfFlexibleOrder(u,h)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*PriceBlockOrder(u));
 *Power balance
 EQ_PowerBalance(h,n,o,t,sk) ..
-         sum(d, AcceptanceRatioOfDemandOrders(d,h)*AvailabilityFactorDemandOrder(d,h)*Demand(d)*LocationDemandSide(d,n))
+         sum(d, AcceptanceRatioOfDemandOrders(d,h)*AvailabilityFactorDemandOrder(d,h)*MaxDemand(d)*LocationDemandSide(d,n))
          =E=
          sum(u, AcceptanceRatioOfSimpleOrders(u,h)*AvailabilityFactorSimpleOrder(u,h)*PowerCapacity(u)*LocationSupplySide(u,n))
          + sum(u, AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,h)*PowerCapacity(u)*LocationSupplySide(u,n))
@@ -252,11 +258,11 @@ EQ_Flexibleorder(u) ..
          =L=
          1;
 *Flows are above minimum values
-*EQ_Flow_limits_lower(l,h)..
-*         FlowMinimum(l,h)
-*         =L=
-*         Flow(l,h)
-*;
+EQ_Flow_limits_lower(l,h)..
+         FlowMinimum(l,h)
+         =L=
+         Flow(l,h)
+;
 *Flows are below maximum values
 EQ_Flow_limits_upper(l,h)..
          Flow(l,h)
