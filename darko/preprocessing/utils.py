@@ -61,7 +61,8 @@ def select_demands(units,config):
 def incidence_matrix(sets, set_used, parameters, param_used):
     """
     This function generates the incidence matrix of the lines within the nodes
-    A particular case is considered for the node "Rest Of the World", which is no explicitely defined in DARKO
+    A particular case is considered for the node "Rest Of the World", which is 
+    no explicitely defined in DARKO
     """
 
     for i in range(len(sets[set_used])):

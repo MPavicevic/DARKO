@@ -32,25 +32,26 @@ $set InputFileName Inputs.gdx
 * (1 to retrieve 0 to not)
 $setglobal RetrieveStatus 0
 
+
 *===============================================================================
 *Definition of sets and parameters
 *===============================================================================
 SETS
-u           Units Supply Side                    /HOBO_GAS, HOBO_BIO, THMS_OTH/
-d           ProsumersConsumers Demand Side       /D1, D2, D3/
-o           Order type                           /Simple, Block, Flexible/
-n           Nodes                                /Z1, Z2/
-l           Lines                                /Z1Z2, Z2Z1/
-t           Technologies                         /HOBO, SOTH, THMS/
-tr(t)       Renewable technologies               /SOTH/
-f           Fuel types                           /GAS, BIO, OTH/
-s(u)        Storage Technologies                 /THMS_OTH/
-h           Hours                                /h1*h3/
+u           Units Supply Side
+d           ProsumersConsumers Demand Side
+o           Order type
+n           Nodes
+l           Lines
+t           Technologies
+tr(t)       Renewable technologies
+f           Fuel types
+s(u)        Storage Technologies
+h           Hours
 i(h)        Subset of simulated hours for one iteration
 z(h)        Subset of all simulated hours
-sk          Sectors                              /REZ, IND/
-
+sk          Sectors
 ;
+
 
 Alias(d,dd);
 Alias(n,nn);
@@ -64,98 +65,79 @@ Alias(i,ii);
 Alias(o,oo);
 Alias(sk,sksk);
 
-$ontext
-*Parameters as defined in the input file
-* \u indicate that the value is provided for one single unit
 PARAMETERS
-$offtext
-Parameter AccaptanceBlockOrdersMin(u)         [%]      Accaptance ratio for block orders
-/HOBO_BIO    0.5
-,HOBO_GAS    0/;
-TABLE AvailabilityFactorDemandOrder(d,h)       [%]      Share of maximum demand in time period h
-        h1   h2   h3
-D1     0.5  0.6  0.7
-D2     0.9  0.8  0.7
-D3     1    1    1;
-TABLE AvailabilityFactorSimpleOrder(u,h)       [%]      Share of maximum Simple order in time period h
-              h1   h2   h3
-HOBO_BIO      0     0    0
-HOBO_GAS      1     1    1;
-TABLE AvailabilityFactorBlockOrder(u,h)        [%]      Share of maximum Block order in time period h
-              h1   h2   h3
-HOBO_BIO      1     1    1
-HOBO_GAS      0     0    0;
-Parameter AvailabilityFactorFlexibleOrder(u)         [%]      Accaptance ratio for block orders
-/THMS_OTH   1/;
-*Config
-Parameter MaxDemand(d)                                [MW\u]   Maximum demand
-/D1 50
-,D2 100
-,D3 30/;
-TABLE Fuel(u,f)                                [n.a.]   Fuel type {1 0}
-              GAS   BIO  OTH
-HOBO_BIO      0      1    0
-HOBO_GAS      1      0    0
-THMS_OTH      0      0    1;
-TABLE LocationDemandSide(d,n)                  [n.a.]   Location {1 0}
-     Z1 Z2
-D1   1  0
-D2   1  0
-D3   0  1;
-TABLE LocationSupplySide(u,n)                  [n.a.]   Location {1 0}
-          Z1   Z2
-HOBO_BIO   1   0
-HOBO_GAS   1   0
-THMS_OTH   0   1;
-TABLE Order(u,o)                               [n.a.]   Order type {1 0}
-          Simple  Block  Flexible
-HOBO_BIO   0        1       0
-HOBO_GAS   1        0       0
-THMS_OTH   0        0       1;
-Parameter PowerCapacity(u)                         [MW\u]   Installed capacity
-/HOBO_BIO 50
-,HOBO_GAS 100
-,THMS_OTH 30/;
-TABLE PriceDemandOrder(d,h)                    [€\MW]   Price ofer of the consumer d in time period h
-        h1   h2   h3
-D1      20   20   20
-D2      30   30   30
-D3      30   30   30;
-TABLE PriceSimpleOrder(u,h)                    [€\MW]   Price ofer of the simple order u in time period h
-          h1   h2  h3
-HOBO_BIO  0    0   0
-HOBO_GAS  25   25  25;
-Parameter PriceBlockOrder(u)                       [€\MW]   Default block order price
-/HOBO_BIO 10
-,HOBO_GAS 0/;
-Parameter PriceFlexibleOrder(u)                       [€\MW]   Default block order price
-/THMS_OTH 30/;
-TABLE Sector(d,sk)                             [n.a.]   Demand sector type {1 0}
-       REZ  IND
-D1     1    0
-D2     0    1
-D3     0    1;
-TABLE Technology(u,t)                          [n.a.]   Technology type {1 0}
-          HOBO
-HOBO_BIO  1
-HOBO_GAS  1;
-Table LineNode(l,n)                    [n.a.]   Incidence matrix {-1 +1}
-       Z1    Z2
-Z1Z2   1     -1
-Z2Z1   -1    1;
-Table FlowMaximum(l,h)                 [MW]     Line limits
-       h1   h2  h3
-Z1Z2   20   30  20
-Z2Z1   30   20  30;
-Table FlowMinimum(l,h)                 [MW]     Minimum flow
-       h1   h2  h3
-Z1Z2   0    0    0
-Z2Z1   0    0    0;
+Config
+AccaptanceBlockOrdersMin(u)              [%]      Accaptance ratio for block orders
+AvailabilityFactorDemandOrder(d,h)       [%]      Share of maximum demand in time period h
+AvailabilityFactorSimpleOrder(u,h)       [%]      Share of maximum Simple order in time period h
+AvailabilityFactorBlockOrder(u,h)        [%]      Share of maximum Block order in time period h
+AvailabilityFactorFlexibleOrder(u)       [%]      Accaptance ratio for block orders
+MaxDemand(d)                             [MW\u]   Maximum demand
+Fuel(u,f)                                [n.a.]   Fuel type              {1 0}
+LocationDemandSide(d,n)                  [n.a.]   Location               {1 0}
+LocationSupplySide(u,n)                  [n.a.]   Location               {1 0}
+OrderType(u,o)                           [n.a.]   Order type             {1 0}
+PowerCapacity(u)                         [MW\u]   Installed capacity
+PriceDemandOrder(d,h)                    [€\MW]   Price ofer of the consumer d in time period h
+PriceSimpleOrder(u,h)                    [€\MW]   Price ofer of the simple order u in time period h
+PriceBlockOrder(u)                       [€\MW]   Default block order price
+PriceFlexibleOrder(u)                    [€\MW]   Default block order price
+Sector(d,sk)                             [n.a.]   Demand sector type     {1 0}
+Technology(u,t)                          [n.a.]   Technology type        {1 0}
+LineNode(l,n)                            [n.a.]   Incidence matrix       {-1 +1}
+FlowMaximum(l,h)                         [MW]     Line limits
+FlowMinimum(l,h)                         [MW]     Minimum flow
+
+* Scalar variables necessary to the loop:
+scalar FirstHour,LastHour,LastKeptHour,day,ndays,failed;
+FirstHour = 1;
+
+*===============================================================================
+*Data import
+*===============================================================================
+
+$gdxin %inputfilename%
+
+$LOAD u
+$LOAD d
+$LOAD o
+$LOAD n
+$LOAD l
+$LOAD t
+$LOAD tr
+$LOAD f
+$LOAD s
+$LOAD h
+$LOAD z
+$LOAD sk
+$LOAD AccaptanceBlockOrdersMin
+$LOAD AvailabilityFactorDemandOrder
+$LOAD AvailabilityFactorSimpleOrder
+$LOAD AvailabilityFactorBlockOrder
+$LOAD AvailabilityFactorFlexibleOrder
+$LOAD Config
+$LOAD MaxDemand
+$LOAD Fuel
+$LOAD LocationDemandSide
+$LOAD LocationSupplySide
+$LOAD OrderType
+$LOAD PowerCapacity
+$LOAD PriceDemandOrder
+$LOAD PriceSimpleOrder
+$LOAD PriceBlockOrder
+$LOAD PriceFlexibleOrder
+$LOAD Sector
+$LOAD Technology
+$LOAD LineNode
+$LOAD FlowMinimum
+$LOAD FlowMaximum
+;
 
 Display
 u,
 d,
 o,
+n,
 l,
 t,
 tr,
@@ -169,12 +151,12 @@ AvailabilityFactorDemandOrder,
 AvailabilityFactorSimpleOrder,
 AvailabilityFactorBlockOrder
 AvailabilityFactorFlexibleOrder,
-*Config,
+Config,
 MaxDemand,
 Fuel,
 LocationDemandSide,
 LocationSupplySide,
-Order,
+OrderType,
 PowerCapacity,
 PriceDemandOrder,
 PriceSimpleOrder,
@@ -183,7 +165,7 @@ PriceFlexibleOrder,
 Sector,
 Technology,
 LineNode,
-FlowMaximum
+FlowMaximum,
 FlowMinimum
 ;
 
@@ -233,7 +215,7 @@ EQ_Welfare ..
          sum((d,h), AcceptanceRatioOfDemandOrders(d,h)*AvailabilityFactorDemandOrder(d,h)*MaxDemand(d)*PriceDemandOrder(d,h))
          - sum((u,h), AcceptanceRatioOfSimpleOrders(u,h)*AvailabilityFactorSimpleOrder(u,h)*PowerCapacity(u)*PriceSimpleOrder(u,h))
          - sum((u,h), AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,h)*PowerCapacity(u)*PriceBlockOrder(u))
-         - sum((u,h), ClearingStatusOfFlexibleOrder(u,h)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*PriceBlockOrder(u));
+         - sum((u,h), ClearingStatusOfFlexibleOrder(u,h)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*PriceFlexibleOrder(u));
 *Power balance
 EQ_PowerBalance(h,n,o,t,sk) ..
          sum(d, AcceptanceRatioOfDemandOrders(d,h)*AvailabilityFactorDemandOrder(d,h)*MaxDemand(d)*LocationDemandSide(d,n))
@@ -279,7 +261,8 @@ EQ_PowerBalance
 EQ_Blockorder_lb
 EQ_Blockorder_ub
 EQ_Flexibleorder
-EQ_Flow_limits_upper/;
+EQ_Flow_limits_upper
+EQ_Flow_limits_lower/;
 
 *===============================================================================
 *Solving the models
@@ -289,23 +272,37 @@ SOLVE DARKO using MIP MAXIMIZE TotalWelfare;
 *===============================================================================
 *Result export
 *===============================================================================
-$ontext
 PARAMETER
-QuantityDemand(d,i)
-PriceDemand(d,i)
-QuantitySupply(s,i)
-PriceSupply(s,i)
-QuantityBlockOrder(bo,i)
-PriceBlockOrder(bo)
+OutputAcceptanceRatioOfDemandOrders(d,h)
+OutputAcceptanceRatioOfSimpleOrders(u,h)
+OutputAcceptanceRatioOfBlockOrders(u)
+OutputClearingStatusOfBlockOrder(u)
+OutputClearingStatusOfFlexibleOrder(u,h)
+OutputFlow(l,h)
+OutputMarginalPrice(h,n,o,t,sk)
+OutputTotalWelfare
 ;
 
-QuantityDemand(d,i) = Q_Demand.L(d,i);
-PriceDemand(d,i) = P_Demand.L(d,i);
-QuantitySupply(s,i) = Q_Supply.L(s,i);
-PriceSupply(s,i) = P_Supply.L(s,i);
-QuantityBlockOrder(bo,i) = Q_BlockOrder.L(bo,i);
-PriceBlockOrder(bo) = P_BlockOrder.L(bo,t);
-$offtext
+OutputAcceptanceRatioOfDemandOrders(d,h) = AcceptanceRatioOfDemandOrders.L(d,h);
+OutputAcceptanceRatioOfSimpleOrders(u,h) = AcceptanceRatioOfSimpleOrders.L(u,h);
+OutputAcceptanceRatioOfBlockOrders(u) = AcceptanceRatioOfBlockOrders.L(u);
+OutputClearingStatusOfBlockOrder(u) = ClearingStatusOfBlockOrder.L(u);
+OutputClearingStatusOfFlexibleOrder(u,h) = ClearingStatusOfFlexibleOrder.L(u,h);
+OutputFlow(l,h) = Flow.L(l,h);
+OutputMarginalPrice(h,n,o,t,sk) = EQ_PowerBalance.m(h,n,o,t,sk);
+OutputTotalWelfare = TotalWelfare.L;
+
+EXECUTE_UNLOAD "Results.gdx"
+OutputAcceptanceRatioOfDemandOrders,
+OutputAcceptanceRatioOfSimpleOrders,
+OutputAcceptanceRatioOfBlockOrders,
+OutputClearingStatusOfBlockOrder,
+OutputClearingStatusOfFlexibleOrder,
+OutputFlow,
+OutputMarginalPrice,
+OutputTotalWelfare
+*status
+;
 
 display
 AcceptanceRatioOfDemandOrders.L,
@@ -314,7 +311,5 @@ AcceptanceRatioOfBlockOrders.L,
 ClearingStatusOfBlockOrder.L,
 ClearingStatusOfFlexibleOrder.L,
 Flow.L,
-EQ_PowerBalance.m
+EQ_PowerBalance.m,
 TotalWelfare.L
-
-

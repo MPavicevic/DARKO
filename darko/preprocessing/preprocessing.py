@@ -13,11 +13,12 @@ import sys
 import numpy as np
 import pandas as pd
 
-from .data_check import check_units, check_sto, check_demands, check_MinMaxFlows
-#, check_chp,  check_heat_demand, check_df, isStorage, check_MinMaxFlows,check_AvailabilityFactors, check_clustering
+from .data_check import check_units, check_sto, check_demands, check_MinMaxFlows, check_AvailabilityFactorsUnits, check_AvailabilityFactorsDemands, check_df
+# isStorage
 from .data_handler import load_csv, UnitBasedTable, NodeBasedTable, define_parameter
 from .utils import incidence_matrix, select_units, select_demands, interconnections
 
+from ..misc.gdx_handler import write_variables, gdx_to_list, gdx_to_dataframe
 from ..common import commons  # Load fuel types, technologies, timestep, etc:
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
@@ -62,10 +63,11 @@ def build_simulation(config):
     idx_utc = idx_utc_noloc.tz_localize('UTC')
 
     # Indexes for the whole year considered in StartDate
-    idx_utc_year_noloc = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*(config['StartDate'][0],1,1,0,0)),
-                                                        end=pd.datetime(*(config['StartDate'][0],12,31,23,59,59)),
-                                                        freq=commons['TimeStep'])
-                                          )
+    idx_utc_year_noloc = pd.DatetimeIndex(pd.date_range(
+                                        start=pd.datetime(*(config['StartDate'][0],1,1,0,0)),
+                                        end=pd.datetime(*(config['StartDate'][0],12,31,23,59,59)),
+                                        freq=commons['TimeStep'])
+                                        )
 
     # %%#################################################################################################################
     #####################################   Data Loading    ###########################################################
@@ -156,15 +158,7 @@ def build_simulation(config):
                                    fallbacks=['Unit','Technology'],
                                    tablename='PriceSimpleOrder',
                                    default=0)
-#
-#    # For the peak load, the whole year is considered:
-#    PeakLoad = NodeBasedTable(config['Quantity - Demand Order'],idx_utc_year_noloc,config['zones'],tablename='PeakLoad').max()
-#
-#    if config['modifiers']['Demand'] != 1:
-#        logging.info('Scaling load curve by a factor ' + str(config['modifiers']['Demand']))
-#        Load = Load * config['modifiers']['Demand']
-#        PeakLoad = PeakLoad * config['modifiers']['Demand']
-        
+       
     # Interconnections:
     if os.path.isfile(config['Interconnections']):
         flows = load_csv(config['Interconnections'], index_col=0, parse_dates=True).fillna(0)
@@ -192,15 +186,10 @@ def build_simulation(config):
 #    ReservoirScaledInflows = UnitBasedTable(plants_sto,config['ReservoirScaledInflows'],idx_utc_noloc,config['zones'],fallbacks=['Unit','Technology','Zone'],tablename='ReservoirScaledInflows',default=0)
 
 #    # data checks:
-#    check_AvailabilityFactors(plants,AF)
-#    check_heat_demand(plants,HeatDemand)
-#
-#    # Fuel prices:
-#    fuels = ['PriceOfNuclear', 'PriceOfBlackCoal', 'PriceOfGas', 'PriceOfFuelOil', 'PriceOfBiomass', 'PriceOfCO2', 'PriceOfLignite', 'PriceOfPeat']
-#    FuelPrices = {}
-#    for fuel in fuels:
-#        FuelPrices[fuel] = NodeBasedTable(config[fuel],idx_utc_noloc,config['zones'],tablename=fuel,default=config['default'][fuel])
-#
+    check_AvailabilityFactorsDemands(demands,AFDemandOrder)
+    check_AvailabilityFactorsUnits(plants,AFSimpleOrder)
+    check_AvailabilityFactorsUnits(plants,AFBlockOrder)
+
     # Interconnections:
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], ntc, flows)
 
@@ -285,27 +274,7 @@ def build_simulation(config):
 #    #StorageFormerIndexes = [s for s in plants.index if
 #    #                        plants['Technology'][s] in commons['tech_storage']]
 #
-#    # Same with the CHPs:
-#    # Get the heat demand time series corresponding to the original plant list:
-#    CHPFormerIndexes = [s for s in plants.index if
-#                            plants['CHPType'][s] in commons['types_CHP']]
-#    for s in CHPFormerIndexes:  # for all the old plant indexes
-#        # get the old plant name corresponding to s:
-#        oldname = plants['Unit'][s]
-#        # newname = mapping['NewIndex'][s] #FIXME Unused variable ?
-#        if oldname not in HeatDemand:
-#            logging.warning('No heat demand profile found for CHP plant "' + str(oldname) + '". Assuming zero')
-#            HeatDemand[oldname] = 0
-#        if oldname not in CostHeatSlack:
-#            logging.warning('No heat cost profile found for CHP plant "' + str(oldname) + '". Assuming zero')
-#            CostHeatSlack[oldname] = 0
-# 
-#
-#    # merge the outages:
-#    for i in plants.index:  # for all the old plant indexes
-#        # get the old plant name corresponding to s:
-#        oldname = plants['Unit'][i]
-#        newname = mapping['NewIndex'][i]
+
 #
 #    # Merging the time series relative to the clustered power plants:
 #    ReservoirScaledInflows_merged = merge_series(plants, ReservoirScaledInflows, mapping, method='WeightedAverage', tablename='ScaledInflows')
@@ -318,35 +287,30 @@ def build_simulation(config):
 #
     # %%
     # checking data
-#    check_df(DemandSide, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='DemandSide')
+    # Availability factors
+    check_df(AFDemandOrder, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], 
+             name='AvailabilityFactorsDemandOrder')
+    check_df(AFBlockOrder, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], 
+             name='AvailabilityFactorsBlockOrder')
+    check_df(AFSimpleOrder, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], 
+             name='AvailabilityFactorsSimpleOrder')
+    # Prices
+    check_df(PriceDemandOrder, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], 
+             name='PriceDemandOrder')
+    check_df(PriceSimpleOrder, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], 
+             name='PriceSimpleOrder')
+    # Interconnections
+    check_df(Inter_RoW, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], 
+             name='Inter_RoW')
+    check_df(ntcs, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], 
+             name='NTCs')
 
-
-#    check_df(AF_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
-#             name='AF_merged')
-#    check_df(Outages_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Outages_merged')
-#    check_df(Inter_RoW, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='Inter_RoW')
-#    for key in FuelPrices:
-#        check_df(FuelPrices[key], StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name=key)
-#    check_df(NTCs, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1], name='NTCs')
-#    check_df(ReservoirLevels_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
-#             name='ReservoirLevels_merged')
-#    check_df(ReservoirScaledInflows_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
-#             name='ReservoirScaledInflows_merged')
-#    check_df(HeatDemand_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
-#             name='HeatDemand_merged')
-#    check_df(CostHeatSlack_merged, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
-#             name='CostHeatSlack_merged')
-#    check_df(LoadShedding, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
-#             name='LoadShedding')
-#    check_df(CostLoadShedding, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
-#             name='CostLoadShedding')
-#
 ##    for key in Renewables:
 ##        check_df(Renewables[key], StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
 ##                 name='Renewables["' + key + '"]')
 #
-#    # %%%
-#
+    # %%%
+
     # Extending the data to include the look-ahead period (with constant values assumed)
     enddate_long = idx_utc_noloc[-1] + dt.timedelta(days=config['LookAhead'])
     idx_long = pd.DatetimeIndex(pd.date_range(start=idx_utc_noloc[0], end=enddate_long, freq=commons['TimeStep']))
@@ -382,8 +346,8 @@ def build_simulation(config):
     sets['t'] = commons['Technologies']
     sets['tr'] = commons['tech_renewables']
     sets['f'] = commons['Fuels']
-#    sets['s'] = commons['tech_storage']
-    sets['s'] = plants_sto.index.tolist()
+    sets['s'] = commons['tech_storage']
+#    sets['s'] = plants_sto.index.tolist()
     sets['h'] = [str(x + 1) for x in range(Nhours_long)]
     sets['z'] = [str(x + 1) for x in range(Nhours_long - config['LookAhead'] * 24)]
     sets['sk'] = commons['Sectors']
@@ -393,6 +357,7 @@ def build_simulation(config):
     ###################################################################################################################
 
     Nunits = len(plants)
+    Ndems = len(demands)
     parameters = {}
 
     # Each parameter is associated with certain sets, as defined in the following list:
@@ -406,7 +371,7 @@ def build_simulation(config):
     sets_param['Fuel'] = ['u','f']
     sets_param['LocationDemandSide'] = ['d','n']
     sets_param['LocationSupplySide'] = ['u','n']
-    sets_param['Order'] = ['u','o']
+    sets_param['OrderType'] = ['u','o']
     sets_param['PowerCapacity'] = ['u']
     sets_param['PriceDemandOrder'] = ['d','h']
     sets_param['PriceSimpleOrder'] = ['u','h']
@@ -418,7 +383,7 @@ def build_simulation(config):
     sets_param['FlowMaximum'] = ['l','h']
     sets_param['FlowMinimum'] = ['l','h']
     sets_param['PowerCapacity'] = ['u']
-    sets_param['StorageCapacity'] = ['u']
+    sets_param['StorageCapacity'] = ['s']
     sets_param['StorageMaxChargingPower'] = ['s']
     sets_param['StorageChargingEfficiency'] = ['s']
     sets_param['StorageSelfDischarge'] = ['s']
@@ -428,7 +393,7 @@ def build_simulation(config):
         parameters[var] = define_parameter(sets_param[var], sets, value=0)
 
     # Boolean parameters:
-    for var in ['Fuel', 'LocationDemandSide', 'LocationSupplySide', 'Order',
+    for var in ['Fuel', 'LocationDemandSide', 'LocationSupplySide', 'OrderType',
                 'Sector', 'Technology']:
         parameters[var] = define_parameter(sets_param[var], sets, value='bool')
 
@@ -499,6 +464,16 @@ def build_simulation(config):
     
     parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
 
+    # Orders
+    for unit in range(Nunits):
+        idx = sets['o'].index(plants['OrderType'][unit])
+        parameters['OrderType']['val'][unit, idx] = True
+
+    # Sectors
+    for dem in range(Ndems):
+        idx = sets['sk'].index(demands['Sector'][dem])
+        parameters['Sector']['val'][dem, idx] = True
+
     # Technologies
     for unit in range(Nunits):
         idx = sets['t'].index(plants['Technology'][unit])
@@ -517,19 +492,21 @@ def build_simulation(config):
     for i in range(len(sets['n'])):
         parameters['LocationSupplySide']['val'][:, i] = (plants['Zone'] == config['zones'][i]).values
 
-##TODO: integrated the parameters (VOLL, Water value, etc) from the excel config file
-#    values = np.array([
-#        [dd_begin.year, dd_begin.month, dd_begin.day, 0],
-#        [dd_end.year, dd_end.month, dd_end.day, 0],
-#        [0, 0, config['HorizonLength'], 0],
-#        [0, 0, config['LookAhead'], 0],
-#        [0, 0, 0, 1e5],     # Value of lost load
-#        [0, 0, 0, 0.5],       # allowed Share of quick start units in reserve
-#        [0, 0, 0, 1],       # Cost of spillage (EUR/MWh)
-#        [0, 0, 0, 100],       # Value of water (for unsatisfied water reservoir levels, EUR/MWh)
-#    ])
-#    parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
-#
+    # Config variables:
+    sets['x_config'] = ['FirstDay', 'LastDay', 'RollingHorizon Length', 'RollingHorizon LookAhead']
+    sets['y_config'] = ['year', 'month', 'day', 'val']
+    dd_begin = idx_long[4]
+    dd_end = idx_long[-2]
+
+#TODO: integrated the parameters (VOLL, Water value, etc) from the excel config file
+    values = np.array([
+        [dd_begin.year, dd_begin.month, dd_begin.day, 0],
+        [dd_end.year, dd_end.month, dd_end.day, 0],
+        [0, 0, config['HorizonLength'], 0],
+        [0, 0, config['LookAhead'], 0]
+    ])
+    parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
+
     # %%#################################################################################################################
     ######################################   Simulation Environment     ################################################
     ####################################################################################################################
@@ -538,20 +515,22 @@ def build_simulation(config):
     sim = config['SimulationDirectory']
 
     # Simulation data:
-    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units': plants, 'version': darko_version}
-#
-#    # list_vars = []
-#    gdx_out = "Inputs.gdx"
-#    if config['WriteGDX']:
-#        write_variables(config['GAMS_folder'], gdx_out, [sets, parameters])
-#
-#    # if the sim variable was not defined:
-#    if 'sim' not in locals():
-#        logging.error('Please provide a path where to store the DispaSET inputs (in the "sim" variable)')
-#        sys.exit(1)
-#
-#    if not os.path.exists(sim):
-#        os.makedirs(sim)
+    SimData = {'sets': sets, 'parameters': parameters, 'config': config, 'units': plants, 
+               'demands': demands, 'version': darko_version}
+
+    # list_vars = []
+    gdx_out = "Inputs.gdx"
+    if config['WriteGDX']:
+        write_variables(config['GAMS_folder'], gdx_out, [sets, parameters])
+
+    # if the sim variable was not defined:
+    if 'sim' not in locals():
+        logging.error('Please provide a path where to store the DispaSET inputs ' + 
+                      '(in the "sim" variable)')
+        sys.exit(1)
+
+    if not os.path.exists(sim):
+        os.makedirs(sim)
 #    if LP:
 #        fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
 #        fout = open(os.path.join(sim,'UCM_h.gms'), "wt")
@@ -563,52 +542,52 @@ def build_simulation(config):
 #        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
 #                        os.path.join(sim, 'UCM_h_simple.gms'))
 #    else:
-#        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h.gms'),
-#                        os.path.join(sim, 'UCM_h.gms'))
-#        # additionally allso copy UCM_h_simple.gms
-#        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-#                        os.path.join(sim, 'UCM_h_simple.gms'))
-#    gmsfile = open(os.path.join(sim, 'UCM.gpr'), 'w')
-#    gmsfile.write(
-#        '[PROJECT] \n \n[RP:UCM_H] \n1= \n[OPENWINDOW_1] \nFILE0=UCM_h.gms \nFILE1=UCM_h.gms \nMAXIM=1 \nTOP=50 \nLEFT=50 \nHEIGHT=400 \nWIDTH=400')
-#    gmsfile.close()
+    shutil.copyfile(os.path.join(GMS_FOLDER, 'DARKO.gms'),
+                    os.path.join(sim, 'DARKO.gms'))
+    # additionally allso copy UCM_h_simple.gms
+#    shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
+#                    os.path.join(sim, 'UCM_h_simple.gms'))
+    gmsfile = open(os.path.join(sim, 'DARKO.gpr'), 'w')
+    gmsfile.write(
+        '[PROJECT] \n \n[RP:DARKO] \n1= \n[OPENWINDOW_1] \nFILE0=DARKO.gms \nFILE1=DARKO.gms \nMAXIM=1 \nTOP=50 \nLEFT=50 \nHEIGHT=400 \nWIDTH=400')
+    gmsfile.close()
 #    shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
 #                    os.path.join(sim, 'writeresults.gms'))
-#    # Create cplex option file
-#    cplex_options = {'epgap': 0.05, # TODO: For the moment hardcoded, it has to be moved to a config file
-#                     'numericalemphasis': 0,
-#                     'scaind': 1,
-#                     'lpmethod': 0,
-#                     'relaxfixedinfeas': 0,
-#                     'mipstart':1,
-#                     'epint':0}
-#
-#    lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
-#    with open(os.path.join(sim, 'cplex.opt'), 'w') as f:
-#        for line in lines_to_write:
-#            f.write(line + '\n')
-#
-#    logging.debug('Using gams file from ' + GMS_FOLDER)
-#    if config['WriteGDX']:
-#        shutil.copy(gdx_out, sim + '/')
-#        os.remove(gdx_out)
-#    # Copy bat file to generate gdx file directly from excel:
-#    shutil.copy(os.path.join(GMS_FOLDER, 'makeGDX.bat'),
-#                os.path.join(sim, 'makeGDX.bat'))
-#
+    # Create cplex option file
+    cplex_options = {'epgap': 0.05, # TODO: For the moment hardcoded, it has to be moved to a config file
+                     'numericalemphasis': 0,
+                     'scaind': 1,
+                     'lpmethod': 0,
+                     'relaxfixedinfeas': 0,
+                     'mipstart':1,
+                     'epint':0}
+
+    lines_to_write = ['{} {}'.format(k, v) for k, v in cplex_options.items()]
+    with open(os.path.join(sim, 'cplex.opt'), 'w') as f:
+        for line in lines_to_write:
+            f.write(line + '\n')
+
+    logging.debug('Using gams file from ' + GMS_FOLDER)
+    if config['WriteGDX']:
+        shutil.copy(gdx_out, sim + '/')
+        os.remove(gdx_out)
+    # Copy bat file to generate gdx file directly from excel:
+    shutil.copy(os.path.join(GMS_FOLDER, 'makeGDX.bat'),
+                os.path.join(sim, 'makeGDX.bat'))
+
 #    if config['WriteExcel']:
 #        write_to_excel(sim, [sets, parameters])
-#
-#    if config['WritePickle']:
-#        try:
-#            import cPickle as pickle
-#        except ImportError:
-#            import pickle
-#        with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
-#            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
-#    logging.info('Build finished')
-#    
-#    if os.path.isfile(commons['logfile']):
-#        shutil.copy(commons['logfile'], os.path.join(sim, 'warn_preprocessing.log'))
-#
+
+    if config['WritePickle']:
+        try:
+            import cPickle as pickle
+        except ImportError:
+            import pickle
+        with open(os.path.join(sim, 'Inputs.p'), 'wb') as pfile:
+            pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
+    logging.info('Build finished')
+    
+    if os.path.isfile(commons['logfile']):
+        shutil.copy(commons['logfile'], os.path.join(sim, 'warn_preprocessing.log'))
+
     return SimData
