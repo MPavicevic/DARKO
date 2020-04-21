@@ -19,19 +19,11 @@ from .data_check import check_units, check_sto, check_demands, check_MinMaxFlows
 from .data_handler import load_csv, UnitBasedTable, NodeBasedTable, define_parameter
 from .utils import incidence_matrix, select_units, select_demands, interconnections
 
+from .. import __version__
 from ..misc.gdx_handler import write_variables, gdx_to_list, gdx_to_dataframe
-from ..common import commons  # Load fuel types, technologies, timestep, etc:
+from ..common import commons, get_git_revision_tag  # Load fuel types, technologies, timestep, etc:
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
-
-
-def get_git_revision_tag():
-    """Get version of DARKO used for this run. tag + commit hash"""
-    from subprocess import check_output
-    try:
-        return check_output(["git", "describe", "--tags", "--always"]).strip()
-    except:
-        return 'NA'
 
 
 def build_simulation(config):
@@ -42,10 +34,8 @@ def build_simulation(config):
 
     :param config:        Dictionary with all the configuration fields loaded from the excel file.
                           Output of the 'LoadConfig' function.
-    :param plot_load:     Boolean used to display a plot of the demand curves in the different zones
-    :param profiles:      Profiles from mid term scheduling simulations
     """
-    darko_version = str(get_git_revision_tag())
+    darko_version = __version__ + str(get_git_revision_tag())
     logging.info('New build started. DARKO version: ' + darko_version)
     # %%###############################################################################################################
     #####################################   Main Inputs    ############################################################
@@ -59,8 +49,8 @@ def build_simulation(config):
     config['StopDate'] = (y_end, m_end, d_end, 23, 59, 00)  # updating stopdate to the end of the day
 
     # Indexes of the simulation:
-    idx_std = pd.DatetimeIndex(pd.date_range(start=pd.datetime(*config['StartDate']),
-                                             end=pd.datetime(*config['StopDate']),
+    idx_std = pd.DatetimeIndex(pd.date_range(start=dt.datetime(*config['StartDate']),
+                                             end=dt.datetime(*config['StopDate']),
                                              freq=commons['TimeStep'])
                                )
     idx_utc_noloc = idx_std - dt.timedelta(hours=1)
@@ -68,8 +58,8 @@ def build_simulation(config):
 
     # Indexes for the whole year considered in StartDate
     idx_utc_year_noloc = pd.DatetimeIndex(pd.date_range(
-        start=pd.datetime(*(config['StartDate'][0], 1, 1, 0, 0)),
-        end=pd.datetime(*(config['StartDate'][0], 12, 31, 23, 59, 59)),
+        start=dt.datetime(*(config['StartDate'][0], 1, 1, 0, 0)),
+        end=dt.datetime(*(config['StartDate'][0], 12, 31, 23, 59, 59)),
         freq=commons['TimeStep'])
     )
 

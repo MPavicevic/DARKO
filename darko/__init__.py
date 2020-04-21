@@ -3,7 +3,7 @@ import os
 
 ## Sets the __version__ variable
 from ._version import __version__
-from .common import commons
+from .common import commons, get_git_revision_tag
 
 #from .preprocessing.preprocessing import get_git_revision_tag
 #__gitversion__ = get_git_revision_tag()

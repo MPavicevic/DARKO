@@ -44,3 +44,11 @@ commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '',
                       }
 
 commons['logfile'] = str(datetime.datetime.now()).replace(':','-').replace(' ','_') + '.darko.log'
+
+def get_git_revision_tag():
+    """Get version of DARKO used for this run. tag + commit hash"""
+    from subprocess import check_output
+    try:
+        return check_output(["git", "describe", "--tags", "--always"]).strip()
+    except:
+        return 'NA'
