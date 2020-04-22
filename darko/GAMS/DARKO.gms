@@ -89,7 +89,7 @@ FlowMaximum(l,h)                         [MW]     Line limits
 FlowMinimum(l,h)                         [MW]     Minimum flow
 
 * Scalar variables necessary to the loop:
-scalar FirstHour,LastHour,LastKeptHour,day,ndays,failed;
+scalar FirstHour,LastHour,LastKeptHour,day,ndays,nloops,cloop,failed;
 FirstHour = 1;
 
 *===============================================================================
@@ -212,18 +212,18 @@ EQ_Flow_limits_lower define lower limit on flows between zones
 EQ_Welfare ..
          TotalWelfare
          =E=
-         sum((d,h), AcceptanceRatioOfDemandOrders(d,h)*AvailabilityFactorDemandOrder(d,h)*MaxDemand(d)*PriceDemandOrder(d,h))
-         - sum((u,h), AcceptanceRatioOfSimpleOrders(u,h)*AvailabilityFactorSimpleOrder(u,h)*PowerCapacity(u)*PriceSimpleOrder(u,h))
-         - sum((u,h), AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,h)*PowerCapacity(u)*PriceBlockOrder(u))
-         - sum((u,h), ClearingStatusOfFlexibleOrder(u,h)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*PriceFlexibleOrder(u));
+         sum((d,i), AcceptanceRatioOfDemandOrders(d,i)*AvailabilityFactorDemandOrder(d,i)*MaxDemand(d)*PriceDemandOrder(d,i))
+         - sum((u,i), AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)*PriceSimpleOrder(u,i))
+         - sum((u,i), AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,i)*PowerCapacity(u)*PriceBlockOrder(u))
+         - sum((u,i), ClearingStatusOfFlexibleOrder(u,i)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*PriceFlexibleOrder(u));
 *Power balance
-EQ_PowerBalance(h,n,o,t,sk) ..
-         sum(d, AcceptanceRatioOfDemandOrders(d,h)*AvailabilityFactorDemandOrder(d,h)*MaxDemand(d)*LocationDemandSide(d,n))
+EQ_PowerBalance(i,n,o,t,sk) ..
+         sum(d, AcceptanceRatioOfDemandOrders(d,i)*AvailabilityFactorDemandOrder(d,i)*MaxDemand(d)*LocationDemandSide(d,n))
          =E=
-         sum(u, AcceptanceRatioOfSimpleOrders(u,h)*AvailabilityFactorSimpleOrder(u,h)*PowerCapacity(u)*LocationSupplySide(u,n))
-         + sum(u, AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,h)*PowerCapacity(u)*LocationSupplySide(u,n))
-         + sum(u, ClearingStatusOfFlexibleOrder(u,h)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*LocationSupplySide(u,n))
-         + sum(l,Flow(l,h)*LineNode(l,n));
+         sum(u, AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)*LocationSupplySide(u,n))
+         + sum(u, AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,i)*PowerCapacity(u)*LocationSupplySide(u,n))
+         + sum(u, ClearingStatusOfFlexibleOrder(u,i)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*LocationSupplySide(u,n))
+         + sum(l,Flow(l,i)*LineNode(l,n));
 *Lower bound on block order
 EQ_Blockorder_lb(u) ..
          AccaptanceBlockOrdersMin(u)*ClearingStatusOfBlockOrder(u)
@@ -236,20 +236,20 @@ EQ_Blockorder_ub(u) ..
          ClearingStatusOfBlockOrder(u);
 *Flexible order
 EQ_Flexibleorder(u) ..
-         sum(h, ClearingStatusOfFlexibleOrder(u,h))
+         sum(i, ClearingStatusOfFlexibleOrder(u,i))
          =L=
          1;
 *Flows are above minimum values
-EQ_Flow_limits_lower(l,h)..
-         FlowMinimum(l,h)
+EQ_Flow_limits_lower(l,i)..
+         FlowMinimum(l,i)
          =L=
-         Flow(l,h)
+         Flow(l,i)
 ;
 *Flows are below maximum values
-EQ_Flow_limits_upper(l,h)..
-         Flow(l,h)
+EQ_Flow_limits_upper(l,i)..
+         Flow(l,i)
          =L=
-         FlowMaximum(l,h)
+         FlowMaximum(l,i)
 ;
 
 *===============================================================================
@@ -267,7 +267,66 @@ EQ_Flow_limits_lower/;
 *===============================================================================
 *Solving the models
 *===============================================================================
+ndays = floor(card(h)/24);
+nloops = ceil(card(h)/24/Config("RollingHorizon Length","day"));
+
+if (Config("RollingHorizon LookAhead","day") > ndays -1, abort "The look ahead period is longer than the simulation length";);
+
+* Some parameters used for debugging:
+failed=0;
+
+* Defining a parameter that records the solver status:
+set  tmp   "tpm"  / "model", "solver" /  ;
+PARAMETER status(tmp,h);
+
+$if %Debug% == 1 $goto DebugSection
+
+display "OK";
+
+* Set for the the ndays
+scalar starttime;
+set days /1,'ndays'/;
+display days,ndays;
+PARAMETER elapsed(days);
+
+* Set for the nloops
+set nlp /1*10000/;
+display nlp, nloops;
+PARAMETER
+OutputAcceptanceRatioOfBlockOrders(u, nlp)
+OutputClearingStatusOfBlockOrder(u, nlp)
+OutputTotalWelfare(nlp)
+;
+
+cloop = 0
+
+FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("RollingHorizon Length","day"),
+         FirstHour = (day-1)*24+1;
+         LastHour = min(card(h),FirstHour + (Config("RollingHorizon Length","day")+Config("RollingHorizon LookAhead","day"))*24 - 1);
+         LastKeptHour = LastHour - Config("RollingHorizon LookAhead","day")*24;
+         i(h) = no;
+         i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
+         display day,FirstHour,LastHour,LastKeptHour;
+
 SOLVE DARKO using MIP MAXIMIZE TotalWelfare;
+
+$If %Verbose% == 0
+Display EQ_Welfare.L, EQ_PowerBalance.M, EQ_Blockorder_lb.L, EQ_Blockorder_ub.L, EQ_Flexibleorder.L, EQ_Flow_limits_upper.L, EQ_Flow_limits_lower.L;
+$label skipdisplay3
+
+         status("model",i) = DARKO.Modelstat;
+         status("solver",i) = DARKO.Solvestat;
+
+*Loop variables to display after solving:
+$If %Verbose% == 1 Display LastKeptHour;
+
+*Save output results for each loop:
+cloop = cloop + 1;
+display cloop;
+OutputAcceptanceRatioOfBlockOrders(u, nlp)$(ord(nlp) = cloop) = AcceptanceRatioOfBlockOrders.L(u);
+OutputClearingStatusOfBlockOrder(u, nlp)$(ord(nlp) = cloop)   = ClearingStatusOfBlockOrder.L(u);
+OutputTotalWelfare(nlp)$(ord(nlp) = cloop) = TotalWelfare.L;
+);
 
 *===============================================================================
 *Result export
@@ -275,22 +334,16 @@ SOLVE DARKO using MIP MAXIMIZE TotalWelfare;
 PARAMETER
 OutputAcceptanceRatioOfDemandOrders(d,h)
 OutputAcceptanceRatioOfSimpleOrders(u,h)
-OutputAcceptanceRatioOfBlockOrders(u)
-OutputClearingStatusOfBlockOrder(u)
 OutputClearingStatusOfFlexibleOrder(u,h)
 OutputFlow(l,h)
 OutputMarginalPrice(h,n,o,t,sk)
-OutputTotalWelfare
 ;
 
-OutputAcceptanceRatioOfDemandOrders(d,h) = AcceptanceRatioOfDemandOrders.L(d,h);
-OutputAcceptanceRatioOfSimpleOrders(u,h) = AcceptanceRatioOfSimpleOrders.L(u,h);
-OutputAcceptanceRatioOfBlockOrders(u) = AcceptanceRatioOfBlockOrders.L(u);
-OutputClearingStatusOfBlockOrder(u) = ClearingStatusOfBlockOrder.L(u);
-OutputClearingStatusOfFlexibleOrder(u,h) = ClearingStatusOfFlexibleOrder.L(u,h);
-OutputFlow(l,h) = Flow.L(l,h);
-OutputMarginalPrice(h,n,o,t,sk) = EQ_PowerBalance.m(h,n,o,t,sk);
-OutputTotalWelfare = TotalWelfare.L;
+OutputAcceptanceRatioOfDemandOrders(d,z) = AcceptanceRatioOfDemandOrders.L(d,z);
+OutputAcceptanceRatioOfSimpleOrders(u,z) = AcceptanceRatioOfSimpleOrders.L(u,z);
+OutputClearingStatusOfFlexibleOrder(u,z) = ClearingStatusOfFlexibleOrder.L(u,z);
+OutputFlow(l,z) = Flow.L(l,z);
+OutputMarginalPrice(z,n,o,t,sk) = EQ_PowerBalance.m(z,n,o,t,sk);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputAcceptanceRatioOfDemandOrders,
@@ -300,8 +353,8 @@ OutputClearingStatusOfBlockOrder,
 OutputClearingStatusOfFlexibleOrder,
 OutputFlow,
 OutputMarginalPrice,
-OutputTotalWelfare
-*status
+OutputTotalWelfare,
+status
 ;
 
 display

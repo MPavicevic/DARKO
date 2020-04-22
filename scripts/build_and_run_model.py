@@ -29,6 +29,6 @@ SimData = dk.build_simulation(config)
 
 # Solve using GAMS:
 r = dk.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
-#
-## Load the simulation results:
-#inputs,results = ds.get_sim_results(config['SimulationDirectory'],cache=False)
+
+# Load the simulation results:
+inputs,results = dk.get_sim_results(config['SimulationDirectory'],cache=False)
