@@ -237,6 +237,20 @@ def load_csv(filename, TempPath='.pickle', header=0, skiprows=None, skipfooter=0
     return data
 
 
+def load_config(ConfigFile,AbsPath=True):
+    """
+    Wrapper function around load_config_excel and load_config_yaml
+    """
+    if ConfigFile.endswith(('.xlsx','.xls')):
+        config = load_config_excel(ConfigFile,AbsPath=True)
+    # elif ConfigFile.endswith(('.yml','.yaml')):
+    #     config = load_config_yaml(ConfigFile,AbsPath=True)
+    else:
+        logging.critical('The extension of the config file should be .xlsx or .yml')
+        sys.exit(1)
+    return config
+
+
 def load_config_excel(ConfigFile,AbsPath=True):
     """
     Function that loads the DARKO excel config file and returns a dictionary

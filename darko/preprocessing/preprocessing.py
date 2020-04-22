@@ -35,7 +35,7 @@ def build_simulation(config):
     :param config:        Dictionary with all the configuration fields loaded from the excel file.
                           Output of the 'LoadConfig' function.
     """
-    darko_version = __version__ + str(get_git_revision_tag())
+    darko_version = __version__
     logging.info('New build started. DARKO version: ' + darko_version)
     # %%###############################################################################################################
     #####################################   Main Inputs    ############################################################
