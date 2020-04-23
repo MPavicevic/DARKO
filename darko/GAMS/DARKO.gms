@@ -87,6 +87,8 @@ Technology(u,t)                          [n.a.]   Technology type        {1 0}
 LineNode(l,n)                            [n.a.]   Incidence matrix       {-1 +1}
 FlowMaximum(l,h)                         [MW]     Line limits
 FlowMinimum(l,h)                         [MW]     Minimum flow
+RampUp(u)
+RampDown(u)
 
 * Scalar variables necessary to the loop:
 scalar FirstHour,LastHour,LastKeptHour,day,ndays,nloops,cloop,failed;
@@ -131,6 +133,8 @@ $LOAD Technology
 $LOAD LineNode
 $LOAD FlowMinimum
 $LOAD FlowMaximum
+$LOAD RampUp
+$LOAD RampDown
 ;
 
 Display
@@ -166,17 +170,20 @@ Sector,
 Technology,
 LineNode,
 FlowMaximum,
-FlowMinimum
+FlowMinimum,
+RampUp,
+RampDown
 ;
 
 *===============================================================================
 *Definition of variables
 *===============================================================================
 POSITIVE VARIABLES
-AcceptanceRatioOfDemandOrders(d,h)    acceptance ratio of demand orders
-AcceptanceRatioOfSimpleOrders(u,h)    acceptance ratio of simple orders
-AcceptanceRatioOfBlockOrders(u)      acceptance ratio of block orders
-Flow(l,h) [MW]    Flow through lines
+AcceptanceRatioOfDemandOrders(d,h)       [%]     acceptance ratio of demand orders
+AcceptanceRatioOfSimpleOrders(u,h)       [%]     acceptance ratio of simple orders
+AcceptanceRatioOfBlockOrders(u)          [%]     acceptance ratio of block orders
+Flow(l,h)                                [MW]    Flow through lines
+NetPositionOfBiddingArea(n,h)            [EUR]   net position of bidding area
 ;
 
 BINARY VARIABLE
@@ -204,8 +211,8 @@ EQ_PowerBalance    define power balance
 EQ_Blockorder_lb   define lower bound on block order
 EQ_Blockorder_ub   define uper bound on block order
 EQ_Flexibleorder   define flexible order constraints
-EQ_Flow_limits_upper define upper limit on flows between zones
-EQ_Flow_limits_lower define lower limit on flows between zones
+EQ_Flow_limits_ub  define upper limit on flows between zones
+EQ_Flow_limits_lb  define lower limit on flows between zones
 ;
 
 * Objective function
@@ -217,7 +224,7 @@ EQ_Welfare ..
          - sum((u,i), AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,i)*PowerCapacity(u)*PriceBlockOrder(u))
          - sum((u,i), ClearingStatusOfFlexibleOrder(u,i)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*PriceFlexibleOrder(u));
 *Power balance
-EQ_PowerBalance(i,n,o,t,sk) ..
+EQ_PowerBalance(i,n) ..
          sum(d, AcceptanceRatioOfDemandOrders(d,i)*AvailabilityFactorDemandOrder(d,i)*MaxDemand(d)*LocationDemandSide(d,n))
          =E=
          sum(u, AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)*LocationSupplySide(u,n))
@@ -226,31 +233,39 @@ EQ_PowerBalance(i,n,o,t,sk) ..
          + sum(l,Flow(l,i)*LineNode(l,n));
 *Lower bound on block order
 EQ_Blockorder_lb(u) ..
-         AccaptanceBlockOrdersMin(u)*ClearingStatusOfBlockOrder(u)
+         AccaptanceBlockOrdersMin(u)*ClearingStatusOfBlockOrder(u)*OrderType(u,"Block")
          =L=
          AcceptanceRatioOfBlockOrders(u);
 *Upper bound on block order
 EQ_Blockorder_ub(u) ..
          AcceptanceRatioOfBlockOrders(u)
          =L=
-         ClearingStatusOfBlockOrder(u);
+         ClearingStatusOfBlockOrder(u)*OrderType(u,"Block");
 *Flexible order
 EQ_Flexibleorder(u) ..
-         sum(i, ClearingStatusOfFlexibleOrder(u,i))
+         sum(i, ClearingStatusOfFlexibleOrder(u,i)*OrderType(u,"Flexible"))
          =L=
          1;
 *Flows are above minimum values
-EQ_Flow_limits_lower(l,i)..
+EQ_Flow_limits_lb(l,i)..
          FlowMinimum(l,i)
          =L=
          Flow(l,i)
 ;
 *Flows are below maximum values
-EQ_Flow_limits_upper(l,i)..
+EQ_Flow_limits_ub(l,i)..
          Flow(l,i)
          =L=
          FlowMaximum(l,i)
 ;
+* Ramping rates are bound by maximum ramp up and down MW/min
+*EQ_RampUp_ub(i)..
+*         sum(u, AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u))
+*         - sum(u, AcceptanceRatioOfSimpleOrders(u,i-1)$(ord(i) > 1)*AvailabilityFactorSimpleOrder(u,i-1)$(ord(i) > 1)*PowerCapacity(u))
+*         =L=
+*         sum(u,RampUp(u)*PowerCapacity(u))
+;
+
 
 *===============================================================================
 *Definition of models
@@ -261,8 +276,9 @@ EQ_PowerBalance
 EQ_Blockorder_lb
 EQ_Blockorder_ub
 EQ_Flexibleorder
-EQ_Flow_limits_upper
-EQ_Flow_limits_lower/;
+EQ_Flow_limits_ub
+EQ_Flow_limits_lb
+/;
 
 *===============================================================================
 *Solving the models
@@ -271,6 +287,7 @@ ndays = floor(card(h)/24);
 nloops = ceil(card(h)/24/Config("RollingHorizon Length","day"));
 
 if (Config("RollingHorizon LookAhead","day") > ndays -1, abort "The look ahead period is longer than the simulation length";);
+if (nloops > 10000, abort "Number of loops is longer than the maximum allowed";);
 
 * Some parameters used for debugging:
 failed=0;
@@ -279,12 +296,11 @@ failed=0;
 set  tmp   "tpm"  / "model", "solver" /  ;
 PARAMETER status(tmp,h);
 
+* TODO: Debug section
 $if %Debug% == 1 $goto DebugSection
-
 display "OK";
 
 * Set for the the ndays
-scalar starttime;
 set days /1,'ndays'/;
 display days,ndays;
 PARAMETER elapsed(days);
@@ -292,6 +308,8 @@ PARAMETER elapsed(days);
 * Set for the nloops
 set nlp /1*10000/;
 display nlp, nloops;
+
+* Parameters used only within loops
 PARAMETER
 OutputAcceptanceRatioOfBlockOrders(u, nlp)
 OutputClearingStatusOfBlockOrder(u, nlp)
@@ -311,8 +329,7 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
 SOLVE DARKO using MIP MAXIMIZE TotalWelfare;
 
 $If %Verbose% == 0
-Display EQ_Welfare.L, EQ_PowerBalance.M, EQ_Blockorder_lb.L, EQ_Blockorder_ub.L, EQ_Flexibleorder.L, EQ_Flow_limits_upper.L, EQ_Flow_limits_lower.L;
-$label skipdisplay3
+Display EQ_Welfare.L, EQ_PowerBalance.M, EQ_Blockorder_lb.L, EQ_Blockorder_ub.L, EQ_Flexibleorder.L, EQ_Flow_limits_ub.L, EQ_Flow_limits_lb.L;
 
          status("model",i) = DARKO.Modelstat;
          status("solver",i) = DARKO.Solvestat;
@@ -331,19 +348,20 @@ OutputTotalWelfare(nlp)$(ord(nlp) = cloop) = TotalWelfare.L;
 *===============================================================================
 *Result export
 *===============================================================================
+* Parameters used outside of the loops
 PARAMETER
 OutputAcceptanceRatioOfDemandOrders(d,h)
 OutputAcceptanceRatioOfSimpleOrders(u,h)
 OutputClearingStatusOfFlexibleOrder(u,h)
 OutputFlow(l,h)
-OutputMarginalPrice(h,n,o,t,sk)
+OutputMarginalPrice(h,n)
 ;
 
 OutputAcceptanceRatioOfDemandOrders(d,z) = AcceptanceRatioOfDemandOrders.L(d,z);
 OutputAcceptanceRatioOfSimpleOrders(u,z) = AcceptanceRatioOfSimpleOrders.L(u,z);
 OutputClearingStatusOfFlexibleOrder(u,z) = ClearingStatusOfFlexibleOrder.L(u,z);
 OutputFlow(l,z) = Flow.L(l,z);
-OutputMarginalPrice(z,n,o,t,sk) = EQ_PowerBalance.m(z,n,o,t,sk);
+OutputMarginalPrice(z,n) = EQ_PowerBalance.m(z,n);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputAcceptanceRatioOfDemandOrders,

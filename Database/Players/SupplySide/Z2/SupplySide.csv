@@ -1,2 +1,2 @@
 ,PowerCapacity,Unit,Zone,Sector,Technology,Fuel,Efficiency,CO2Intensity,OrderType,PriceBlockOrder,PriceFlexibleOrder,AccaptanceBlockOrdersMin,AvailabilityFactorFlexibleOrder,StorageCapacity,StorageSelfDischarge,StorageMaxChargingPower,StorageChargingEfficiency
-Z2_THMS_OTH,30,Z2_THMS_OTH,Z2,IND,THMS,OTH,0.93,,Flexible,,30,,1,300,,,
+Z2_THMS_OTH,30,Z2_THMS_OTH,Z2,IND,THMS,OTH,0.93,,Flexible,,20,,1,300,,,

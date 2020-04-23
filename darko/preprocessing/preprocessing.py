@@ -1,5 +1,6 @@
 """
-This is the main file of the DARKO pre-processing tool. It comprises a single function that generated the DARKO simulation environment.
+This is the main file of the DARKO pre-processing tool.
+It comprises a single function that generated the DARKO simulation environment.
 
 @author: Matija Pavičević
 """
@@ -21,7 +22,7 @@ from .utils import incidence_matrix, select_units, select_demands, interconnecti
 
 from .. import __version__
 from ..misc.gdx_handler import write_variables, gdx_to_list, gdx_to_dataframe
-from ..common import commons, get_git_revision_tag  # Load fuel types, technologies, timestep, etc:
+from ..common import commons  # Load fuel types, technologies, timestep, etc:
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
@@ -83,9 +84,12 @@ def build_simulation(config):
             plants = plants.append(tmp, ignore_index=True)
     # reomve invalide power plants:
     plants = select_units(plants, config)
+    # fill missing parameters with 0
     plants[['PriceBlockOrder', 'PriceFlexibleOrder', 'AccaptanceBlockOrdersMin', 'AvailabilityFactorFlexibleOrder']] = \
         plants[['PriceBlockOrder', 'PriceFlexibleOrder', 'AccaptanceBlockOrdersMin', 'AvailabilityFactorFlexibleOrder']
         ].fillna(0)
+    # Fill missing parameters with 1
+    plants[['RampUp', 'RampDown']] = plants[['RampUp', 'RampDown']].fillna(1)
 
     # check plant list:
     check_units(config, plants)
@@ -264,6 +268,8 @@ def build_simulation(config):
                   'LineNode': ['l', 'n'],
                   'FlowMaximum': ['l', 'h'],
                   'FlowMinimum': ['l', 'h'],
+                  'RampUp': ['u'],
+                  'RampDown': ['u'],
                   'StorageCapacity': ['s'],
                   'StorageMaxChargingPower': ['s'],
                   'StorageChargingEfficiency': ['s'],
@@ -280,8 +286,8 @@ def build_simulation(config):
 
     # %%
     # List of parameters whose value is known, and provided in the dataframe plants.
-    for var in ['PowerCapacity', 'PriceBlockOrder', 'PriceFlexibleOrder', 'AccaptanceBlockOrdersMin',
-                'AvailabilityFactorFlexibleOrder']:
+    for var in ['PowerCapacity', 'RampUp', 'RampDown','PriceBlockOrder', 'PriceFlexibleOrder',
+                'AccaptanceBlockOrdersMin', 'AvailabilityFactorFlexibleOrder']:
         parameters[var]['val'] = plants[var].values
     # List of parameters whose value is known, and provided in the dataframe demands.
     for var in ['MaxDemand']:
@@ -379,7 +385,6 @@ def build_simulation(config):
     dd_begin = idx_long[4]
     dd_end = idx_long[-2]
 
-    # TODO: integrated the parameters (VOLL, Water value, etc) from the excel config file
     values = np.array([
         [dd_begin.year, dd_begin.month, dd_begin.day, 0],
         [dd_end.year, dd_end.month, dd_end.day, 0],
