@@ -183,7 +183,6 @@ AcceptanceRatioOfDemandOrders(d,h)       [%]     acceptance ratio of demand orde
 AcceptanceRatioOfSimpleOrders(u,h)       [%]     acceptance ratio of simple orders
 AcceptanceRatioOfBlockOrders(u)          [%]     acceptance ratio of block orders
 Flow(l,h)                                [MW]    Flow through lines
-NetPositionOfBiddingArea(n,h)            [EUR]   net position of bidding area
 ;
 
 BINARY VARIABLE
@@ -193,6 +192,7 @@ ClearingStatusOfFlexibleOrder(u,h) binary variable
 
 FREE VARIABLE
 TotalWelfare      total welfate
+NetPositionOfBiddingArea(n,h)            [EUR]   net position of bidding area
 ;
 
 *===============================================================================
@@ -207,12 +207,14 @@ AcceptanceRatioOfBlockOrders.up(u) = 1;
 *===============================================================================
 EQUATIONS
 EQ_Welfare         define objective function
-EQ_PowerBalance    define power balance
+EQ_PowerBalance_1    define power balance
+EQ_PowerBalance_2    define power balance
 EQ_Blockorder_lb   define lower bound on block order
 EQ_Blockorder_ub   define uper bound on block order
 EQ_Flexibleorder   define flexible order constraints
 EQ_Flow_limits_ub  define upper limit on flows between zones
 EQ_Flow_limits_lb  define lower limit on flows between zones
+EQ_NetPositionRamp
 ;
 
 * Objective function
@@ -223,14 +225,22 @@ EQ_Welfare ..
          - sum((u,i), AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)*PriceSimpleOrder(u,i))
          - sum((u,i), AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,i)*PowerCapacity(u)*PriceBlockOrder(u))
          - sum((u,i), ClearingStatusOfFlexibleOrder(u,i)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*PriceFlexibleOrder(u));
-*Power balance
-EQ_PowerBalance(i,n) ..
-         sum(d, AcceptanceRatioOfDemandOrders(d,i)*AvailabilityFactorDemandOrder(d,i)*MaxDemand(d)*LocationDemandSide(d,n))
+
+* Neat position of each area
+EQ_PowerBalance_1(i,n)..
+         NetPositionOfBiddingArea(n,i)
          =E=
          sum(u, AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)*LocationSupplySide(u,n))
          + sum(u, AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,i)*PowerCapacity(u)*LocationSupplySide(u,n))
          + sum(u, ClearingStatusOfFlexibleOrder(u,i)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*LocationSupplySide(u,n))
-         + sum(l,Flow(l,i)*LineNode(l,n));
+         - sum(d, AcceptanceRatioOfDemandOrders(d,i)*AvailabilityFactorDemandOrder(d,i)*MaxDemand(d)*LocationDemandSide(d,n));
+
+* Flows between each area
+EQ_PowerBalance_2(i,n)..
+         NetPositionOfBiddingArea(n,i)
+         =E=
+         - sum(l,Flow(l,i)*LineNode(l,n));
+
 *Lower bound on block order
 EQ_Blockorder_lb(u) ..
          AccaptanceBlockOrdersMin(u)*ClearingStatusOfBlockOrder(u)*OrderType(u,"Block")
@@ -266,18 +276,19 @@ EQ_Flow_limits_ub(l,i)..
 *         sum(u,RampUp(u)*PowerCapacity(u))
 ;
 
-
 *===============================================================================
 *Definition of models
 *===============================================================================
 MODEL DARKO  /
 EQ_Welfare
-EQ_PowerBalance
+*EQ_PowerBalance
 EQ_Blockorder_lb
 EQ_Blockorder_ub
 EQ_Flexibleorder
 EQ_Flow_limits_ub
 EQ_Flow_limits_lb
+EQ_PowerBalance_1
+EQ_PowerBalance_2
 /;
 
 *===============================================================================
@@ -329,7 +340,8 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
 SOLVE DARKO using MIP MAXIMIZE TotalWelfare;
 
 $If %Verbose% == 0
-Display EQ_Welfare.L, EQ_PowerBalance.M, EQ_Blockorder_lb.L, EQ_Blockorder_ub.L, EQ_Flexibleorder.L, EQ_Flow_limits_ub.L, EQ_Flow_limits_lb.L;
+*Display EQ_Welfare.L, EQ_PowerBalance.M, EQ_Blockorder_lb.L, EQ_Blockorder_ub.L, EQ_Flexibleorder.L, EQ_Flow_limits_ub.L, EQ_Flow_limits_lb.L;
+Display EQ_Welfare.L, EQ_PowerBalance_1.M, EQ_Blockorder_lb.L, EQ_Blockorder_ub.L, EQ_Flexibleorder.L, EQ_Flow_limits_ub.L, EQ_Flow_limits_lb.L;
 
          status("model",i) = DARKO.Modelstat;
          status("solver",i) = DARKO.Solvestat;
@@ -361,7 +373,8 @@ OutputAcceptanceRatioOfDemandOrders(d,z) = AcceptanceRatioOfDemandOrders.L(d,z);
 OutputAcceptanceRatioOfSimpleOrders(u,z) = AcceptanceRatioOfSimpleOrders.L(u,z);
 OutputClearingStatusOfFlexibleOrder(u,z) = ClearingStatusOfFlexibleOrder.L(u,z);
 OutputFlow(l,z) = Flow.L(l,z);
-OutputMarginalPrice(z,n) = EQ_PowerBalance.m(z,n);
+*OutputMarginalPrice(z,n) = EQ_PowerBalance.m(z,n);
+OutputMarginalPrice(z,n) = EQ_PowerBalance_2.m(z,n);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputAcceptanceRatioOfDemandOrders,
@@ -382,5 +395,8 @@ AcceptanceRatioOfBlockOrders.L,
 ClearingStatusOfBlockOrder.L,
 ClearingStatusOfFlexibleOrder.L,
 Flow.L,
-EQ_PowerBalance.m,
+*EQ_PowerBalance.m,
+EQ_PowerBalance_1.m,
+EQ_PowerBalance_2.m,
+NetPositionOfBiddingArea.L,
 TotalWelfare.L

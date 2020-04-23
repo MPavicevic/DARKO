@@ -234,7 +234,7 @@ def build_simulation(config):
             't': commons['Technologies'],
             'tr': commons['tech_renewables'],
             'f': commons['Fuels'],
-            's': commons['tech_storage'],
+            's': plants_sto['Unit'].tolist(),
             'h': [str(x + 1) for x in range(Nhours_long)],
             'z': [str(x + 1) for x in range(Nhours_long - config['LookAhead'] * 24)],
             'sk': commons['Sectors']
