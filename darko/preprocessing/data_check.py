@@ -212,7 +212,7 @@ def check_units(config, plants):
     Function that checks the power plant characteristics
     """
 
-    keys = ['Unit', 'Fuel', 'Zone', 'Sector', 'Technology', 'PowerCapacity', 'RampUp', 'RampDown',
+    keys = ['Unit', 'Fuel', 'Zone', 'Sector', 'Technology', 'PowerCapacity', 'UnitRampUp', 'UnitRampDown',
             'OrderType', 'PriceBlockOrder', 'PriceFlexibleOrder',
             'AccaptanceBlockOrdersMin', 'AvailabilityFactorFlexibleOrder', 
             'Efficiency', 'CO2Intensity']

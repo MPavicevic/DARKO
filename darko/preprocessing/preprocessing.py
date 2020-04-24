@@ -88,8 +88,10 @@ def build_simulation(config):
     plants[['PriceBlockOrder', 'PriceFlexibleOrder', 'AccaptanceBlockOrdersMin', 'AvailabilityFactorFlexibleOrder']] = \
         plants[['PriceBlockOrder', 'PriceFlexibleOrder', 'AccaptanceBlockOrdersMin', 'AvailabilityFactorFlexibleOrder']
         ].fillna(0)
+    # Rename parameters
+    plants.rename(columns={'RampUp' : 'UnitRampUp','RampDown' : 'UnitRampDown'}, inplace=True)
     # Fill missing parameters with 1
-    plants[['RampUp', 'RampDown']] = plants[['RampUp', 'RampDown']].fillna(1)
+    plants[['UnitRampUp', 'UnitRampDown']] = plants[['UnitRampUp', 'UnitRampDown']].fillna(1)
 
     # check plant list:
     check_units(config, plants)
@@ -113,7 +115,7 @@ def build_simulation(config):
             path = config['PlayersDemandSide'].replace('##', str(z))
             tmp = load_csv(path)
             demands = demands.append(tmp, ignore_index=True)
-    # reomve invalide power plants:
+    # remove invalid power plants:
     demands = select_demands(demands, config)
 
     # check demands list:
@@ -152,6 +154,31 @@ def build_simulation(config):
                                       tablename='PriceSimpleOrder',
                                       default=0)
 
+    # Daily node based ramping rates TODO: Make a function that loads only ingle values for each zone instead of this
+    NodeDailyRampUp = NodeBasedTable(config['NodeDailyRampUp'], idx_utc_noloc,
+                                     config['zones'], tablename='NodeDailyRampUp',
+                                     default=config['default']['NodeDailyRampUp'])
+    NodeDailyRampDown = NodeBasedTable(config['NodeDailyRampDown'], idx_utc_noloc,
+                                       config['zones'], tablename='NodeDailyRampDown',
+                                       default=config['default']['NodeDailyRampDown'])
+    NodeDailyRamp = pd.DataFrame([NodeDailyRampUp.iloc[0], NodeDailyRampDown.iloc[0]],index=['NodeDailyRampUp','NodeDailyRampDown']).T
+    MaxDemand = demands.groupby(['Zone'])['MaxDemand'].agg('sum')
+    # Adjust to the fraction of max total demand
+    NodeDailyRamp = (NodeDailyRamp.T*MaxDemand).T
+    NodeDailyRamp.reset_index(inplace=True)
+
+    # Hourly node based ramping rates
+    NodeHourlyRampUp = NodeBasedTable(config['NodeHourlyRampUp'], idx_utc_noloc,
+                                config['zones'], tablename='NodeHourlyRampUp',
+                                default=config['default']['NodeHourlyRampUp'])
+    NodeHourlyRampDown = NodeBasedTable(config['NodeHourlyRampDown'], idx_utc_noloc,
+                                  config['zones'], tablename='NodeHourlyRampDown',
+                                  default=config['default']['NodeHourlyRampDown'])
+    # Adjust to the fraction of max capacity
+    NodeHourlyRampUp = NodeHourlyRampUp*MaxDemand
+    NodeHourlyRampDown = NodeHourlyRampDown*MaxDemand
+
+
     # Interconnections:
     if os.path.isfile(config['Interconnections']):
         flows = load_csv(config['Interconnections'], index_col=0, parse_dates=True).fillna(0)
@@ -163,6 +190,17 @@ def build_simulation(config):
     else:
         logging.warning('No NTC values will be considered (no valid file provided)')
         ntc = pd.DataFrame(index=idx_utc_noloc)
+
+    # Interconnection ramping rates
+    LineHourlyRampUp = NodeBasedTable(config['LineHourlyRampUp'], idx_utc_noloc,
+                                list(ntc.columns), tablename='LineHourlyRampUp',
+                                default=config['default']['LineHourlyRampUp'])
+    LineHourlyRampDown = NodeBasedTable(config['LineHourlyRampDown'], idx_utc_noloc,
+                                  list(ntc.columns), tablename='LineHourlyRampDown',
+                                  default=config['default']['LineHourlyRampDown'])
+    # Adjust to the fraction of max capacity
+    LineHourlyRampUp = LineHourlyRampUp * ntc.max()
+    LineHourlyRampDown = LineHourlyRampDown * ntc.max()
 
     # data checks:
     check_AvailabilityFactorsDemands(demands, AFDemandOrder)
@@ -197,6 +235,16 @@ def build_simulation(config):
              name='Inter_RoW')
     check_df(ntcs, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='NTCs')
+    # Line ramping rates
+    check_df(LineHourlyRampUp, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+             name='LineHourlyRampUp')
+    check_df(LineHourlyRampDown, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+             name='LineHourlyRampDown')
+    check_df(NodeHourlyRampUp, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+             name='NodeHourlyRampUp')
+    check_df(NodeHourlyRampDown, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+             name='NodeHourlyRampDown')
+
 
     # %%%
 
@@ -213,6 +261,10 @@ def build_simulation(config):
     PriceSimpleOrder = PriceSimpleOrder.reindex(idx_long, method='nearest').fillna(method='bfill')
     Inter_RoW = Inter_RoW.reindex(idx_long, method='nearest').fillna(method='bfill')
     ntcs = ntcs.reindex(idx_long, method='nearest').fillna(method='bfill')
+    LineHourlyRampUp = LineHourlyRampUp.reindex(idx_long, method='nearest').fillna(method='bfill')
+    LineHourlyRampDown = LineHourlyRampDown.reindex(idx_long, method='nearest').fillna(method='bfill')
+    NodeHourlyRampUp = NodeHourlyRampUp.reindex(idx_long, method='nearest').fillna(method='bfill')
+    NodeHourlyRampDown = NodeHourlyRampDown.reindex(idx_long, method='nearest').fillna(method='bfill')
     #    for key in FuelPrices:
     #        FuelPrices[key] = FuelPrices[key].reindex(idx_long, method='nearest').fillna(method='bfill')
     #    ReservoirLevels_merged = ReservoirLevels_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
@@ -254,7 +306,8 @@ def build_simulation(config):
                   'AvailabilityFactorSimpleOrder': ['u', 'h'],
                   'AvailabilityFactorBlockOrder': ['u', 'h'],
                   'AvailabilityFactorFlexibleOrder': ['u'],
-                  'MaxDemand': ['d'], 'Fuel': ['u', 'f'],
+                  'MaxDemand': ['d'],
+                  'Fuel': ['u', 'f'],
                   'LocationDemandSide': ['d', 'n'],
                   'LocationSupplySide': ['u', 'n'],
                   'OrderType': ['u', 'o'],
@@ -268,8 +321,18 @@ def build_simulation(config):
                   'LineNode': ['l', 'n'],
                   'FlowMaximum': ['l', 'h'],
                   'FlowMinimum': ['l', 'h'],
-                  'RampUp': ['u'],
-                  'RampDown': ['u'],
+                  'UnitRampUp': ['u'],
+                  'UnitRampDown': ['u'],
+                  'NodeHourlyRampUp': ['n', 'h'],
+                  'NodeHourlyRampDown': ['n', 'h'],
+                  'NodeDailyRampUp': ['n'],
+                  'NodeDailyRampDown': ['n'],
+                  'LineHourlyRampUp': ['l', 'h'],
+                  'LineHourlyRampDown': ['l', 'h'],
+                  'LineDailyRampUp': ['l'],
+                  'LineDailyRampDown': ['l'],
+                  'NodeInitial': ['n'],
+                  'LineInitial': ['l'],
                   'StorageCapacity': ['s'],
                   'StorageMaxChargingPower': ['s'],
                   'StorageChargingEfficiency': ['s'],
@@ -286,12 +349,16 @@ def build_simulation(config):
 
     # %%
     # List of parameters whose value is known, and provided in the dataframe plants.
-    for var in ['PowerCapacity', 'RampUp', 'RampDown','PriceBlockOrder', 'PriceFlexibleOrder',
+    for var in ['PowerCapacity', 'UnitRampUp', 'UnitRampDown','PriceBlockOrder', 'PriceFlexibleOrder',
                 'AccaptanceBlockOrdersMin', 'AvailabilityFactorFlexibleOrder']:
         parameters[var]['val'] = plants[var].values
     # List of parameters whose value is known, and provided in the dataframe demands.
     for var in ['MaxDemand']:
         parameters[var]['val'] = demands[var].values
+
+    # List of parameters whose value is know and provided for each zone
+    for var in ['NodeDailyRampUp', 'NodeDailyRampDown']:
+        parameters[var]['val'] = NodeDailyRamp[var].values
 
     # List of parameters whose value is known, and provided in the availability factors.
     for i, d in enumerate(sets['d']):
@@ -346,10 +413,21 @@ def build_simulation(config):
         if l in Inter_RoW.columns:
             parameters['FlowMaximum']['val'][i, :] = Inter_RoW[l]
             parameters['FlowMinimum']['val'][i, :] = Inter_RoW[l]
+        if l in LineHourlyRampUp.columns:
+            parameters['LineHourlyRampUp']['val'][i, :] = LineHourlyRampUp[l]
+        if l in LineHourlyRampDown.columns:
+            parameters['LineHourlyRampDown']['val'][i, :] = LineHourlyRampDown[l]
     # Check values:
     check_MinMaxFlows(parameters['FlowMinimum']['val'], parameters['FlowMaximum']['val'])
 
     parameters['LineNode'] = incidence_matrix(sets, 'l', parameters, 'LineNode')
+
+    # Maximum hourly ramp rates per node
+    for i, n in enumerate(sets['n']):
+        if n in NodeHourlyRampUp.columns:
+            parameters['NodeHourlyRampUp']['val'][i, :] = NodeHourlyRampUp[n]
+        if n in NodeHourlyRampDown.columns:
+            parameters['NodeHourlyRampDown']['val'][i, :] = NodeHourlyRampDown[n]
 
     # Orders
     for unit in range(Nunits):

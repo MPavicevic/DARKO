@@ -87,11 +87,25 @@ Technology(u,t)                          [n.a.]   Technology type        {1 0}
 LineNode(l,n)                            [n.a.]   Incidence matrix       {-1 +1}
 FlowMaximum(l,h)                         [MW]     Line limits
 FlowMinimum(l,h)                         [MW]     Minimum flow
-RampUp(u)
-RampDown(u)
+UnitRampUp(u)
+UnitRampDown(u)
+NodeHourlyRampUp(n, h)
+NodeHourlyRampDown(n, h)
+NodeDailyRampUp(n)
+NodeDailyRampDown(n)
+LineHourlyRampUp(l, h)
+LineHourlyRampDown(l, h)
+LineDailyRampUp(l)
+LineDailyRampDown(l)
+LinkedBlockOrderIncidenceMatrix(u)
+MinimumIncomeFixed(u)
+MinimumIncomeVariable(u)
+LineInitial(l)
+NodeInitial(n)
+;
 
 * Scalar variables necessary to the loop:
-scalar FirstHour,LastHour,LastKeptHour,day,ndays,nloops,cloop,failed;
+SCALAR FirstHour,LastHour,LastKeptHour,day,ndays,nloops,cloop,failed;
 FirstHour = 1;
 
 *===============================================================================
@@ -133,8 +147,18 @@ $LOAD Technology
 $LOAD LineNode
 $LOAD FlowMinimum
 $LOAD FlowMaximum
-$LOAD RampUp
-$LOAD RampDown
+$LOAD UnitRampUp
+$LOAD UnitRampDown
+$LOAD NodeDailyRampUp
+$LOAD NodeDailyRampDown
+$LOAD NodeHourlyRampUp
+$LOAD NodeHourlyRampDown
+$LOAD LineDailyRampUp
+$LOAD LineDailyRampDown
+$LOAD LineHourlyRampUp
+$LOAD LineHourlyRampDown
+$LOAD LineInitial
+$LOAD NodeInitial
 ;
 
 Display
@@ -171,8 +195,18 @@ Technology,
 LineNode,
 FlowMaximum,
 FlowMinimum,
-RampUp,
-RampDown
+UnitRampUp,
+UnitRampDown,
+NodeDailyRampUp,
+NodeDailyRampDown,
+NodeHourlyRampUp,
+NodeHourlyRampDown,
+LineDailyRampUp,
+LineDailyRampDown,
+LineHourlyRampUp,
+LineHourlyRampDown,
+LineInitial,
+NodeInitial
 ;
 
 *===============================================================================
@@ -186,13 +220,14 @@ Flow(l,h)                                [MW]    Flow through lines
 ;
 
 BINARY VARIABLE
-ClearingStatusOfBlockOrder(u)    binary variable
-ClearingStatusOfFlexibleOrder(u,h) binary variable
+ClearingStatusOfBlockOrder(u)                    binary variable
+ClearingStatusOfFlexibleOrder(u,h)               binary variable
 ;
 
 FREE VARIABLE
-TotalWelfare      total welfate
+TotalWelfare                                     total welfate
 NetPositionOfBiddingArea(n,h)            [EUR]   net position of bidding area
+TemporaryNetPositionOfBiddingArea(n,h)   [EUR]   net position of bidding area
 ;
 
 *===============================================================================
@@ -202,6 +237,8 @@ AcceptanceRatioOfDemandOrders.up(d,h) = 1;
 AcceptanceRatioOfSimpleOrders.up(u,h) = 1;
 AcceptanceRatioOfBlockOrders.up(u) = 1;
 
+$offorder
+
 *===============================================================================
 *Declaration and definition of equations
 *===============================================================================
@@ -209,11 +246,16 @@ EQUATIONS
 EQ_Welfare         define objective function
 EQ_PowerBalance_1    define power balance
 EQ_PowerBalance_2    define power balance
+EQ_PowerBalance_3    define power balance
 EQ_Blockorder_lb   define lower bound on block order
 EQ_Blockorder_ub   define uper bound on block order
 EQ_Flexibleorder   define flexible order constraints
 EQ_Flow_limits_ub  define upper limit on flows between zones
 EQ_Flow_limits_lb  define lower limit on flows between zones
+EQ_Flow_ramp_up
+EQ_Flow_ramp_down
+EQ_Node_daily_ramp_up
+EQ_Node_daily_ramp_down
 EQ_NetPositionRamp
 ;
 
@@ -235,9 +277,16 @@ EQ_PowerBalance_1(i,n)..
          + sum(u, ClearingStatusOfFlexibleOrder(u,i)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*LocationSupplySide(u,n))
          - sum(d, AcceptanceRatioOfDemandOrders(d,i)*AvailabilityFactorDemandOrder(d,i)*MaxDemand(d)*LocationDemandSide(d,n));
 
-* Flows between each area
+* Net position due to flows between two areas
 EQ_PowerBalance_2(i,n)..
+         TemporaryNetPositionOfBiddingArea(n,i)
+         =E=
+         - sum(l,Flow(l,i)*LineNode(l,n));
+
+* Net position due to flows between two areas
+EQ_PowerBalance_3(i,n)..
          NetPositionOfBiddingArea(n,i)
+         - TemporaryNetPositionOfBiddingArea(n,i)
          =E=
          - sum(l,Flow(l,i)*LineNode(l,n));
 
@@ -246,28 +295,60 @@ EQ_Blockorder_lb(u) ..
          AccaptanceBlockOrdersMin(u)*ClearingStatusOfBlockOrder(u)*OrderType(u,"Block")
          =L=
          AcceptanceRatioOfBlockOrders(u);
+
 *Upper bound on block order
 EQ_Blockorder_ub(u) ..
          AcceptanceRatioOfBlockOrders(u)
          =L=
          ClearingStatusOfBlockOrder(u)*OrderType(u,"Block");
+
 *Flexible order
 EQ_Flexibleorder(u) ..
          sum(i, ClearingStatusOfFlexibleOrder(u,i)*OrderType(u,"Flexible"))
          =L=
          1;
+
 *Flows are above minimum values
 EQ_Flow_limits_lb(l,i)..
          FlowMinimum(l,i)
          =L=
          Flow(l,i)
 ;
+
 *Flows are below maximum values
 EQ_Flow_limits_ub(l,i)..
          Flow(l,i)
          =L=
          FlowMaximum(l,i)
 ;
+
+*Flows are within ramping limits
+EQ_Flow_ramp_up(l,i)..
+         Flow(l,i)
+         - Flow(l,i-1)$(ord(i) > 1) - LineInitial(l)$(ord(i) = 1)
+         =L=
+         LineHourlyRampUp(l,i)
+;
+
+EQ_Flow_ramp_down(l,i)..
+         - Flow(l,i)
+         + Flow(l,i-1)$(ord(i) > 1) + LineInitial(l)$(ord(i) = 1)
+         =L=
+         LineHourlyRampDown(l,i)
+;
+
+EQ_Node_daily_ramp_up(n)..
+         sum(i, NetPositionOfBiddingArea(n,i))
+         =L=
+         NodeDailyRampUp(n)
+;
+
+EQ_Node_daily_ramp_down(n)..
+         -sum(i, NetPositionOfBiddingArea(n,i))
+         =L=
+         NodeDailyRampDown(n)
+;
+
 * Ramping rates are bound by maximum ramp up and down MW/min
 *EQ_RampUp_ub(i)..
 *         sum(u, AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u))
@@ -281,14 +362,18 @@ EQ_Flow_limits_ub(l,i)..
 *===============================================================================
 MODEL DARKO  /
 EQ_Welfare
-*EQ_PowerBalance
+EQ_PowerBalance_1
+EQ_PowerBalance_2
+EQ_PowerBalance_3
 EQ_Blockorder_lb
 EQ_Blockorder_ub
 EQ_Flexibleorder
 EQ_Flow_limits_ub
 EQ_Flow_limits_lb
-EQ_PowerBalance_1
-EQ_PowerBalance_2
+EQ_Flow_ramp_up
+EQ_Flow_ramp_down
+EQ_Node_daily_ramp_up
+EQ_Node_daily_ramp_down
 /;
 
 *===============================================================================
@@ -340,8 +425,7 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
 SOLVE DARKO using MIP MAXIMIZE TotalWelfare;
 
 $If %Verbose% == 0
-*Display EQ_Welfare.L, EQ_PowerBalance.M, EQ_Blockorder_lb.L, EQ_Blockorder_ub.L, EQ_Flexibleorder.L, EQ_Flow_limits_ub.L, EQ_Flow_limits_lb.L;
-Display EQ_Welfare.L, EQ_PowerBalance_1.M, EQ_Blockorder_lb.L, EQ_Blockorder_ub.L, EQ_Flexibleorder.L, EQ_Flow_limits_ub.L, EQ_Flow_limits_lb.L;
+Display EQ_Welfare.L, EQ_PowerBalance_1.M, EQ_PowerBalance_2.M, EQ_PowerBalance_3.M, EQ_Blockorder_lb.L, EQ_Blockorder_ub.L, EQ_Flexibleorder.L, EQ_Flow_limits_ub.L, EQ_Flow_limits_lb.L;
 
          status("model",i) = DARKO.Modelstat;
          status("solver",i) = DARKO.Solvestat;
@@ -373,8 +457,7 @@ OutputAcceptanceRatioOfDemandOrders(d,z) = AcceptanceRatioOfDemandOrders.L(d,z);
 OutputAcceptanceRatioOfSimpleOrders(u,z) = AcceptanceRatioOfSimpleOrders.L(u,z);
 OutputClearingStatusOfFlexibleOrder(u,z) = ClearingStatusOfFlexibleOrder.L(u,z);
 OutputFlow(l,z) = Flow.L(l,z);
-*OutputMarginalPrice(z,n) = EQ_PowerBalance.m(z,n);
-OutputMarginalPrice(z,n) = EQ_PowerBalance_2.m(z,n);
+OutputMarginalPrice(z,n) = EQ_PowerBalance_1.m(z,n);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputAcceptanceRatioOfDemandOrders,
@@ -388,6 +471,8 @@ OutputTotalWelfare,
 status
 ;
 
+$onorder
+
 display
 AcceptanceRatioOfDemandOrders.L,
 AcceptanceRatioOfSimpleOrders.L,
@@ -395,8 +480,13 @@ AcceptanceRatioOfBlockOrders.L,
 ClearingStatusOfBlockOrder.L,
 ClearingStatusOfFlexibleOrder.L,
 Flow.L,
-*EQ_PowerBalance.m,
 EQ_PowerBalance_1.m,
 EQ_PowerBalance_2.m,
+EQ_PowerBalance_3.m,
+TemporaryNetPositionOfBiddingArea.L,
 NetPositionOfBiddingArea.L,
 TotalWelfare.L
+EQ_Flow_ramp_up.L
+EQ_Flow_ramp_down.L
+EQ_Node_daily_ramp_up.L
+EQ_Node_daily_ramp_down.L
