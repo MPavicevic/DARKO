@@ -252,8 +252,12 @@ EQ_Blockorder_ub   define uper bound on block order
 EQ_Flexibleorder   define flexible order constraints
 EQ_Flow_limits_ub  define upper limit on flows between zones
 EQ_Flow_limits_lb  define lower limit on flows between zones
-EQ_Flow_ramp_up
-EQ_Flow_ramp_down
+EQ_Flow_hourly_ramp_up
+EQ_Flow_hourly_ramp_down
+EQ_Flow_daily_ramp_up
+EQ_Flow_daily_ramp_down
+EQ_Node_hourly_ramp_up
+EQ_Node_hourly_ramp_down
 EQ_Node_daily_ramp_up
 EQ_Node_daily_ramp_down
 EQ_NetPositionRamp
@@ -269,7 +273,7 @@ EQ_Welfare ..
          - sum((u,i), ClearingStatusOfFlexibleOrder(u,i)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*PriceFlexibleOrder(u));
 
 * Neat position of each area
-EQ_PowerBalance_1(i,n)..
+EQ_PowerBalance_1(n,i)..
          NetPositionOfBiddingArea(n,i)
          =E=
          sum(u, AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)*LocationSupplySide(u,n))
@@ -278,13 +282,13 @@ EQ_PowerBalance_1(i,n)..
          - sum(d, AcceptanceRatioOfDemandOrders(d,i)*AvailabilityFactorDemandOrder(d,i)*MaxDemand(d)*LocationDemandSide(d,n));
 
 * Net position due to flows between two areas
-EQ_PowerBalance_2(i,n)..
+EQ_PowerBalance_2(n,i)..
          TemporaryNetPositionOfBiddingArea(n,i)
          =E=
          - sum(l,Flow(l,i)*LineNode(l,n));
 
 * Net position due to flows between two areas
-EQ_PowerBalance_3(i,n)..
+EQ_PowerBalance_3(n,i)..
          NetPositionOfBiddingArea(n,i)
          - TemporaryNetPositionOfBiddingArea(n,i)
          =E=
@@ -322,21 +326,50 @@ EQ_Flow_limits_ub(l,i)..
          FlowMaximum(l,i)
 ;
 
-*Flows are within ramping limits
-EQ_Flow_ramp_up(l,i)..
+*Flows are within hourly ramping limits
+EQ_Flow_hourly_ramp_up(l,i)..
          Flow(l,i)
          - Flow(l,i-1)$(ord(i) > 1) - LineInitial(l)$(ord(i) = 1)
          =L=
          LineHourlyRampUp(l,i)
 ;
 
-EQ_Flow_ramp_down(l,i)..
+EQ_Flow_hourly_ramp_down(l,i)..
          - Flow(l,i)
          + Flow(l,i-1)$(ord(i) > 1) + LineInitial(l)$(ord(i) = 1)
          =L=
          LineHourlyRampDown(l,i)
 ;
 
+*Flows are within daily ramping limits
+EQ_Flow_daily_ramp_up(l)..
+         sum(i, Flow(l,i))
+         =L=
+         LineDailyRampUp(l)
+;
+
+EQ_Flow_daily_ramp_down(l)..
+         -sum(i, Flow(l,i))
+         =L=
+         LineDailyRampDown(l)
+;
+
+* Net position is within hourly limits
+EQ_Node_hourly_ramp_up(n,i)..
+         NetPositionOfBiddingArea(n,i)
+         - NetPositionOfBiddingArea(n,i-1)$(ord(i) > 1)
+         =L=
+         NodeHourlyRampUp(n,i)
+;
+
+EQ_Node_hourly_ramp_down(n,i)..
+         - NetPositionOfBiddingArea(n,i)
+         + NetPositionOfBiddingArea(n,i-1)$(ord(i) > 1)
+         =L=
+         NodeHourlyRampDown(n,i)
+;
+
+* Net position is within daily limits
 EQ_Node_daily_ramp_up(n)..
          sum(i, NetPositionOfBiddingArea(n,i))
          =L=
@@ -370,8 +403,12 @@ EQ_Blockorder_ub
 EQ_Flexibleorder
 EQ_Flow_limits_ub
 EQ_Flow_limits_lb
-EQ_Flow_ramp_up
-EQ_Flow_ramp_down
+EQ_Flow_hourly_ramp_up
+EQ_Flow_hourly_ramp_down
+EQ_Flow_daily_ramp_up
+EQ_Flow_daily_ramp_down
+EQ_Node_hourly_ramp_up
+EQ_Node_hourly_ramp_down
 EQ_Node_daily_ramp_up
 EQ_Node_daily_ramp_down
 /;
@@ -450,14 +487,14 @@ OutputAcceptanceRatioOfDemandOrders(d,h)
 OutputAcceptanceRatioOfSimpleOrders(u,h)
 OutputClearingStatusOfFlexibleOrder(u,h)
 OutputFlow(l,h)
-OutputMarginalPrice(h,n)
+OutputMarginalPrice(n,h)
 ;
 
 OutputAcceptanceRatioOfDemandOrders(d,z) = AcceptanceRatioOfDemandOrders.L(d,z);
 OutputAcceptanceRatioOfSimpleOrders(u,z) = AcceptanceRatioOfSimpleOrders.L(u,z);
 OutputClearingStatusOfFlexibleOrder(u,z) = ClearingStatusOfFlexibleOrder.L(u,z);
 OutputFlow(l,z) = Flow.L(l,z);
-OutputMarginalPrice(z,n) = EQ_PowerBalance_1.m(z,n);
+OutputMarginalPrice(n,z) = EQ_PowerBalance_1.m(n,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputAcceptanceRatioOfDemandOrders,
@@ -486,7 +523,11 @@ EQ_PowerBalance_3.m,
 TemporaryNetPositionOfBiddingArea.L,
 NetPositionOfBiddingArea.L,
 TotalWelfare.L
-EQ_Flow_ramp_up.L
-EQ_Flow_ramp_down.L
+EQ_Flow_hourly_ramp_up.L
+EQ_Flow_hourly_ramp_down.L
+EQ_Flow_daily_ramp_up.L
+EQ_Flow_daily_ramp_down.L
+EQ_Node_hourly_ramp_up.L
+EQ_Node_hourly_ramp_down.L
 EQ_Node_daily_ramp_up.L
 EQ_Node_daily_ramp_down.L

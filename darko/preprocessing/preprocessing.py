@@ -89,7 +89,7 @@ def build_simulation(config):
         plants[['PriceBlockOrder', 'PriceFlexibleOrder', 'AccaptanceBlockOrdersMin', 'AvailabilityFactorFlexibleOrder']
         ].fillna(0)
     # Rename parameters
-    plants.rename(columns={'RampUp' : 'UnitRampUp','RampDown' : 'UnitRampDown'}, inplace=True)
+    plants.rename(columns={'RampUp': 'UnitRampUp', 'RampDown': 'UnitRampDown'}, inplace=True)
     # Fill missing parameters with 1
     plants[['UnitRampUp', 'UnitRampDown']] = plants[['UnitRampUp', 'UnitRampDown']].fillna(1)
 
@@ -161,23 +161,23 @@ def build_simulation(config):
     NodeDailyRampDown = NodeBasedTable(config['NodeDailyRampDown'], idx_utc_noloc,
                                        config['zones'], tablename='NodeDailyRampDown',
                                        default=config['default']['NodeDailyRampDown'])
-    NodeDailyRamp = pd.DataFrame([NodeDailyRampUp.iloc[0], NodeDailyRampDown.iloc[0]],index=['NodeDailyRampUp','NodeDailyRampDown']).T
+    NodeDailyRamp = pd.DataFrame([NodeDailyRampUp.iloc[0], NodeDailyRampDown.iloc[0]],
+                                 index=['NodeDailyRampUp', 'NodeDailyRampDown']).T
     MaxDemand = demands.groupby(['Zone'])['MaxDemand'].agg('sum')
     # Adjust to the fraction of max total demand
-    NodeDailyRamp = (NodeDailyRamp.T*MaxDemand).T
+    NodeDailyRamp = (NodeDailyRamp.T * MaxDemand * 24 * config['HorizonLength']).T
     NodeDailyRamp.reset_index(inplace=True)
 
     # Hourly node based ramping rates
     NodeHourlyRampUp = NodeBasedTable(config['NodeHourlyRampUp'], idx_utc_noloc,
-                                config['zones'], tablename='NodeHourlyRampUp',
-                                default=config['default']['NodeHourlyRampUp'])
+                                      config['zones'], tablename='NodeHourlyRampUp',
+                                      default=config['default']['NodeHourlyRampUp'])
     NodeHourlyRampDown = NodeBasedTable(config['NodeHourlyRampDown'], idx_utc_noloc,
-                                  config['zones'], tablename='NodeHourlyRampDown',
-                                  default=config['default']['NodeHourlyRampDown'])
+                                        config['zones'], tablename='NodeHourlyRampDown',
+                                        default=config['default']['NodeHourlyRampDown'])
     # Adjust to the fraction of max capacity
-    NodeHourlyRampUp = NodeHourlyRampUp*MaxDemand
-    NodeHourlyRampDown = NodeHourlyRampDown*MaxDemand
-
+    NodeHourlyRampUp = NodeHourlyRampUp * MaxDemand
+    NodeHourlyRampDown = NodeHourlyRampDown * MaxDemand
 
     # Interconnections:
     if os.path.isfile(config['Interconnections']):
@@ -191,13 +191,25 @@ def build_simulation(config):
         logging.warning('No NTC values will be considered (no valid file provided)')
         ntc = pd.DataFrame(index=idx_utc_noloc)
 
+    LineDailyRampUp = NodeBasedTable(config['LineDailyRampUp'], idx_utc_noloc,
+                                     list(ntc.columns), tablename='LineDailyRampUp',
+                                     default=config['default']['LineDailyRampUp'])
+    LineDailyRampDown = NodeBasedTable(config['LineDailyRampDown'], idx_utc_noloc,
+                                       list(ntc.columns), tablename='LineDailyRampDown',
+                                       default=config['default']['LineDailyRampDown'])
+    LineDailyRamp = pd.DataFrame([LineDailyRampUp.iloc[0], LineDailyRampDown.iloc[0]],
+                                 index=['LineDailyRampUp', 'LineDailyRampDown']).T
+    # Adjust to the fraction of max total demand
+    LineDailyRamp = (LineDailyRamp.T * ntc.max() * 24 * config['HorizonLength']).T
+    LineDailyRamp.reset_index(inplace=True)
+
     # Interconnection ramping rates
     LineHourlyRampUp = NodeBasedTable(config['LineHourlyRampUp'], idx_utc_noloc,
-                                list(ntc.columns), tablename='LineHourlyRampUp',
-                                default=config['default']['LineHourlyRampUp'])
+                                      list(ntc.columns), tablename='LineHourlyRampUp',
+                                      default=config['default']['LineHourlyRampUp'])
     LineHourlyRampDown = NodeBasedTable(config['LineHourlyRampDown'], idx_utc_noloc,
-                                  list(ntc.columns), tablename='LineHourlyRampDown',
-                                  default=config['default']['LineHourlyRampDown'])
+                                        list(ntc.columns), tablename='LineHourlyRampDown',
+                                        default=config['default']['LineHourlyRampDown'])
     # Adjust to the fraction of max capacity
     LineHourlyRampUp = LineHourlyRampUp * ntc.max()
     LineHourlyRampDown = LineHourlyRampDown * ntc.max()
@@ -240,11 +252,11 @@ def build_simulation(config):
              name='LineHourlyRampUp')
     check_df(LineHourlyRampDown, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='LineHourlyRampDown')
+    # Node ramping rates
     check_df(NodeHourlyRampUp, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='NodeHourlyRampUp')
     check_df(NodeHourlyRampDown, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='NodeHourlyRampDown')
-
 
     # %%%
 
@@ -349,7 +361,7 @@ def build_simulation(config):
 
     # %%
     # List of parameters whose value is known, and provided in the dataframe plants.
-    for var in ['PowerCapacity', 'UnitRampUp', 'UnitRampDown','PriceBlockOrder', 'PriceFlexibleOrder',
+    for var in ['PowerCapacity', 'UnitRampUp', 'UnitRampDown', 'PriceBlockOrder', 'PriceFlexibleOrder',
                 'AccaptanceBlockOrdersMin', 'AvailabilityFactorFlexibleOrder']:
         parameters[var]['val'] = plants[var].values
     # List of parameters whose value is known, and provided in the dataframe demands.
@@ -359,6 +371,9 @@ def build_simulation(config):
     # List of parameters whose value is know and provided for each zone
     for var in ['NodeDailyRampUp', 'NodeDailyRampDown']:
         parameters[var]['val'] = NodeDailyRamp[var].values
+
+    for var in ['LineDailyRampUp', 'LineDailyRampDown']:
+        parameters[var]['val'] = LineDailyRamp[var].values
 
     # List of parameters whose value is known, and provided in the availability factors.
     for i, d in enumerate(sets['d']):

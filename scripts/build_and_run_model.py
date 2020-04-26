@@ -11,7 +11,9 @@ This script runs the DARKO model. The main steps are:
 """
 
 # Add the root folder of DARKO to the path so that the library can be loaded:
-import sys,os
+import os
+import sys
+
 sys.path.append(os.path.abspath('..'))
 
 # Import Dispa-SET
@@ -21,8 +23,8 @@ import darko as dk
 config = dk.load_config_excel('../ConfigFiles/ConfigTest.xlsx')
 
 # Limit the simulation period (for testing purposes, comment the line to run the whole year)
-#config['StartDate'] = (2016, 1, 1, 0, 0, 0)
-#config['StopDate'] = (2016, 1, 7, 0, 0, 0)
+# config['StartDate'] = (2016, 1, 1, 0, 0, 0)
+# config['StopDate'] = (2016, 1, 7, 0, 0, 0)
 
 # Build the simulation environment:
 SimData = dk.build_simulation(config)
@@ -31,4 +33,4 @@ SimData = dk.build_simulation(config)
 r = dk.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 
 # Load the simulation results:
-inputs,results = dk.get_sim_results(config['SimulationDirectory'],cache=False)
+inputs, results = dk.get_sim_results(config['SimulationDirectory'], cache=False)
