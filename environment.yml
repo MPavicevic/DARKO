@@ -13,6 +13,7 @@ dependencies:
   - netcdf4
   - pyyaml >= 5.1
   - pytest
+  - xlsxwriter
   - pip
   - pip:
     - gdxcc

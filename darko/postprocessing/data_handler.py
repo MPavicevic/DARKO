@@ -1,7 +1,6 @@
 import datetime as dt
 import logging
 import sys
-from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -9,42 +8,15 @@ import pandas as pd
 from ..misc.gdx_handler import get_gams_path, gdx_to_dataframe, gdx_to_list
 from ..misc.str_handler import clean_strings
 
-col_keys = {'OutputCommitted': ('u', 'h'), #TODO: Change sets to DARKO
-            'OutputFlow': ('l', 'h'),
-            'OutputPower': ('u', 'h'),
-            'OutputPowerConsumption': ('u', 'h'),
-            'OutputHeat': ('u', 'h'),
-            'OutputHeatSlack': ('u', 'h'),
-            'OutputStorageInput': ('u', 'h'),
-            'OutputStorageLevel': ('u', 'h'),
-            'OutputSystemCost': ('h'),
-            'OutputSpillage': ('u', 'h'),
-            'OutputShedLoad': ('n', 'h'),
-            'OutputCurtailedPower': ('n', 'h'),
-            'OutputDemandModulation': ('n', 'h'),
-            'LostLoad_MaxPower': ('n', 'h'),
-            'LostLoad_MinPower': ('n', 'h'),
-            'LostLoad_2D': ('n', 'h'),
-            'LostLoad_2U': ('n', 'h'),
-            'LostLoad_3U': ('n', 'h'),
-            'LostLoad_RampUp': ('n', 'h'),
-            'LostLoad_RampDown': ('n', 'h'),
-            'ShadowPrice': ('n', 'h'),
-            'StorageShadowPrice': ('u', 'h'),
-            'LostLoad_WaterSlack': ('u'),
-            'status': tuple(),
-            '*': tuple()
-            }
 
-
-def GAMSstatus(statustype, num): #TODO: Check if this is ok
-    '''
+def GAMSstatus(statustype, num):  # TODO: Check if this is ok
+    """
     Function that returns the model status or the solve status from gams
 
     :param statustype: String with the type of status to retrieve ("solver" or "model")
     :param num:     Indicated termination condition (Integer)
     :returns:       String with the status
-    '''
+    """
     if statustype == "model":
         msg = {1: u'Optimal solution achieved',
                2: u'Local optimal solution achieved',
@@ -70,7 +42,8 @@ def GAMSstatus(statustype, num): #TODO: Check if this is ok
                2: u'Solver ran out of iterations (fix with iterlim)',
                3: u'Solver exceeded time limit (fix with reslim)',
                4: u'Solver quit with a problem (see LST file) found',
-               5: u'Solver quit with excessive nonlinear term evaluation errors (see LST file and fix with bounds or domlim)',
+               5: u'Solver quit with excessive nonlinear term evaluation errors (see LST file and fix with bounds or '
+                  u'domlim)',
                6: u'Solver terminated for unknown reason (see LST file)',
                7: u'Solver terminated with preprocessor error (see LST file)',
                8: u'User interrupt',
@@ -84,7 +57,8 @@ def GAMSstatus(statustype, num): #TODO: Check if this is ok
     return str(msg[num])
 
 
-def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, return_status=False): #TODO: Check if it works
+def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False,
+                    return_status=False):  # TODO: Check if it works
     """
     This function reads the simulation environment folder once it has been solved and loads
     the input variables together with the results.
@@ -172,11 +146,13 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
     if "model" in results['status']:
         errors = results['status'][(results['status']['model'] != 1) & (results['status']['model'] != 8)]
         if len(errors) > 0:
-            logging.critical('Some simulation errors were encountered. Some results could not be computed, for example at \n \
-                            time ' + str(errors.index[0]) + ', with the error message: "' + GAMSstatus('model', errors[
-                'model'].iloc[0]) + '". \n \
-                            The complete list is available in results["errors"] \n \
-                            The optimization might be debugged by activating the Debug flag in the GAMS simulation file and running it')
+            logging.critical('Some simulation errors were encountered. Some results could not be computed, '
+                             'for example at \n \ time ' + str(errors.index[0]) + ', with the error message: "' +
+                             GAMSstatus('model', errors[
+                                 'model'].iloc[
+                                 0]) + '". \n \ The complete list is available in results["errors"] \n \ The '
+                                       'optimization might be debugged by activating the Debug flag in the GAMS '
+                                       'simulation file and running it')
             for i in errors.index:
                 errors.loc[i, 'Error Message'] = GAMSstatus('model', errors['model'][i])
             status['errors'] = errors
@@ -191,7 +167,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False, r
         return out
 
 
-def dk_to_df(inputs): #TODO: Adjust gams sets for h and z
+def dk_to_df(inputs):  # TODO: Adjust gams sets for h and z
     """
     Function that converts the DARKO data format into a dictionary of dataframes
 
