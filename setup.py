@@ -26,7 +26,7 @@ exec(open('darko/_version.py').read())
 setup(
     name='darko',
     description='Day-ahead Market Optimization',
-    author='Matija Pavičević
+    author='Matija Pavičević',
     author_email='matija.pavicevic@kuleuven.be',
     url='https://github.com/MPavicevic/DARKO',
     license='EUPL v1.2',
@@ -48,6 +48,7 @@ setup(
         "gdxcc >= 7",
         "gamsxcc",
         "optcc",
+        "xlsxwriter",
         "setuptools_scm",
     ],
     entry_points={
