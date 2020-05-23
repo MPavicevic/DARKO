@@ -4,22 +4,24 @@ This file defines a dictionary with global variables to be used in DARKO such as
 """
 import datetime
 
-commons={}
+commons = {}
 # Timestep
 commons['TimeStep'] = '1h'
-
-# TODO DARKO technologies:
-commons['Technologies'] = ['HOBO','HEPU','ELHE','SOTH','GETH','WSHE','THMS']
+# Technologies
+commons['Technologies'] = ['HOBO', 'HEPU', 'ELHE', 'SOTH', 'GETH', 'WSHE', 'THMS', 'STUR', 'GTUR', 'COMC', 'ICEN',
+                           'SCSP']
 # List of renewable technologies:
-commons['tech_renewables'] = ['SOTH','GETH','WSHE']
+commons['tech_renewables'] = ['SOTH', 'GETH', 'WSHE', 'SCSP']
 # List of storage technologies:
 commons['tech_storage'] = ['THMS']
 # List of CHP types:
-commons['Sectors'] = ['IND','REZ','COM']
+commons['Sectors'] = ['IND', 'REZ', 'COM']
 # DARKO fuels:
-commons['Fuels'] = ['BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH', 'GEO']
+commons['Fuels'] = ['BIO', 'GAS', 'HRD', 'LIG', 'NUC', 'OIL', 'PEA', 'SUN', 'WAT', 'WIN', 'WST', 'OTH', 'GEO', 'ELE',
+                    'WTH']
 # Ordered list of fuels for plotting (the first ones are negative):
-commons['MeritOrder'] = ['Storage','FlowOut','GEO','NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH', 'SUN', 'WIN', 'FlowIn', 'WAT']
+commons['MeritOrder'] = ['Storage', 'FlowOut', 'GEO', 'NUC', 'LIG', 'HRD', 'BIO', 'GAS', 'OIL', 'PEA', 'WST', 'OTH',
+                         'SUN', 'WIN', 'FlowIn', 'WAT']
 # Colors associated with each fuel:
 commons['colors'] = {'LIG': '#af4b9180', 'PEA': '#af4b9199', 'HRD': '#af4b91b2', 'OIL': '#af4b91ff',
                      'GAS': '#d7642dff',
@@ -43,7 +45,8 @@ commons['hatches'] = {'LIG': '', 'PEA': '', 'HRD': '', 'OIL': '',
                       'WST': '', 'OTH': ''
                       }
 
-commons['logfile'] = str(datetime.datetime.now()).replace(':','-').replace(' ','_') + '.darko.log'
+commons['logfile'] = str(datetime.datetime.now()).replace(':', '-').replace(' ', '_') + '.darko.log'
+
 
 def get_git_revision_tag():
     """Get version of DARKO used for this run. tag + commit hash"""

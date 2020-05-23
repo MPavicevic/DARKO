@@ -261,6 +261,8 @@ EQ_Node_hourly_ramp_down
 EQ_Node_daily_ramp_up
 EQ_Node_daily_ramp_down
 EQ_NetPositionRamp
+EQ_Unit_Ramp_Up
+EQ_Unit_Ramp_Down
 ;
 
 * Objective function
@@ -383,12 +385,22 @@ EQ_Node_daily_ramp_down(n)..
 ;
 
 * Ramping rates are bound by maximum ramp up and down MW/min
-*EQ_RampUp_ub(i)..
-*         sum(u, AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u))
-*         - sum(u, AcceptanceRatioOfSimpleOrders(u,i-1)$(ord(i) > 1)*AvailabilityFactorSimpleOrder(u,i-1)$(ord(i) > 1)*PowerCapacity(u))
-*         =L=
-*         sum(u,RampUp(u)*PowerCapacity(u))
+EQ_Unit_Ramp_Up(u,i)$(sum(tr,Technology(u,tr))=0)..
+         AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)
+         - AcceptanceRatioOfSimpleOrders(u,i-1)$(ord(i) > 1)*AvailabilityFactorSimpleOrder(u,i-1)$(ord(i) > 1)*PowerCapacity(u)
+         =L=
+         UnitRampUp(u)*PowerCapacity(u)
 ;
+
+EQ_Unit_Ramp_Down(u,i)$(sum(tr,Technology(u,tr))=0)..
+         - AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)
+         + AcceptanceRatioOfSimpleOrders(u,i-1)$(ord(i) > 1)*AvailabilityFactorSimpleOrder(u,i-1)$(ord(i) > 1)*PowerCapacity(u)
+         =L=
+         UnitRampDown(u)*PowerCapacity(u)
+;
+
+
+
 
 *===============================================================================
 *Definition of models
@@ -411,6 +423,8 @@ EQ_Node_hourly_ramp_up
 EQ_Node_hourly_ramp_down
 EQ_Node_daily_ramp_up
 EQ_Node_daily_ramp_down
+EQ_Unit_Ramp_Up
+EQ_Unit_Ramp_Down
 /;
 
 *===============================================================================

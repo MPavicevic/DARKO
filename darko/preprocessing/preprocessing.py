@@ -59,10 +59,10 @@ def build_simulation(config):
 
     # Indexes for the whole year considered in StartDate
     idx_utc_year_noloc = pd.DatetimeIndex(pd.date_range(
-        start=dt.datetime(*(config['StartDate'][0], 1, 1, 0, 0)),
-        end=dt.datetime(*(config['StartDate'][0], 12, 31, 23, 59, 59)),
-        freq=commons['TimeStep'])
-    )
+                                          start=dt.datetime(*(config['StartDate'][0], 1, 1, 0, 0)),
+                                          end=dt.datetime(*(config['StartDate'][0], 12, 31, 23, 59, 59)),
+                                          freq=commons['TimeStep'])
+                                         )
 
     # %%###############################################################################################################
     #####################################   Data Loading    ###########################################################
@@ -82,7 +82,7 @@ def build_simulation(config):
             path = config['PlayersSupplySide'].replace('##', str(z))
             tmp = load_csv(path)
             plants = plants.append(tmp, ignore_index=True)
-    # reomve invalide power plants:
+    # Remove invalid power plants:
     plants = select_units(plants, config)
     # fill missing parameters with 0
     plants[['PriceBlockOrder', 'PriceFlexibleOrder', 'AccaptanceBlockOrdersMin', 'AvailabilityFactorFlexibleOrder']] = \
@@ -154,7 +154,7 @@ def build_simulation(config):
                                       tablename='PriceSimpleOrder',
                                       default=0)
 
-    # Daily node based ramping rates TODO: Make a function that loads only ingle values for each zone instead of this
+    # Daily node based ramping rates TODO: Make a function that loads only single values for each zone instead of this
     NodeDailyRampUp = NodeBasedTable(config['NodeDailyRampUp'], idx_utc_noloc,
                                      config['zones'], tablename='NodeDailyRampUp',
                                      default=config['default']['NodeDailyRampUp'])
@@ -533,7 +533,8 @@ def build_simulation(config):
     #                    os.path.join(sim, 'UCM_h_simple.gms'))
     gmsfile = open(os.path.join(sim, 'DARKO.gpr'), 'w')
     gmsfile.write(
-        '[PROJECT] \n \n[RP:DARKO] \n1= \n[OPENWINDOW_1] \nFILE0=DARKO.gms \nFILE1=DARKO.gms \nMAXIM=1 \nTOP=50 \nLEFT=50 \nHEIGHT=400 \nWIDTH=400')
+        '[PROJECT] \n \n[RP:DARKO] \n1= \n[OPENWINDOW_1] \nFILE0=DARKO.gms \nFILE1=DARKO.gms \nMAXIM=1 \nTOP=50 '
+        '\nLEFT=50 \nHEIGHT=400 \nWIDTH=400')
     gmsfile.close()
     #    shutil.copyfile(os.path.join(GMS_FOLDER, 'writeresults.gms'),
     #                    os.path.join(sim, 'writeresults.gms'))

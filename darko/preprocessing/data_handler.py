@@ -98,26 +98,24 @@ def NodeBasedTable(path, idx, zones, tablename='', default=None):
 
 def UnitBasedTable(plants, path, idx, zones, fallbacks=['Unit'], tablename='', default=None, RestrictWarning=None):
     """
-    This function loads the tabular data stored in csv files and assigns the
-    proper values to each unit of the plants dataframe. If the unit-specific
-    value is not found in the data, the script can fallback on more generic
-    data (e.g. fuel-based, technology-based, zone-based) or to the default value.
-    The order in which the data should be loaded is specified in the fallback
-    list. For example, ['Unit','Technology'] means that the script will first
-    try to find a perfect match for the unit name in the data table. If not found,
-    a column with the unit technology as header is search. If not found, the
-    default value is assigned.
+    This function loads the tabular data stored in csv files and assigns the proper values to each unit of the plants
+    dataframe. If the unit-specific value is not found in the data, the script can fallback on more generic data
+    (e.g. fuel-based, technology-based, zone-based) or to the default value. The order in which the data should be
+    loaded is specified in the fallback list. For example, ['Unit','Technology'] means that the script will first try
+    to find a perfect match for the unit name in the data table. If not found, a column with the unit technology as
+    header is search. If not found, the default value is assigned.
 
     :param plants:              Dataframe with the units for which data is required
     :param path:                Path to the data to be loaded
     :param idx:                 Pandas datetime index to be used for the output
-    :param zones:           List with the zone codes to be considered
-    :param fallback:            List with the order of data source.
+    :param zones:               List with the zone codes to be considered
+    :param fallbacks:           List with the order of data source.
     :param tablename:           String with the name of the table being processed
     :param default:             Default value to be applied if no data is found
-    :param RestrictWarning:     Only display the warnings if the unit belongs to the list of technologies provided in this parameter
+    :param RestrictWarning:     Only display the warnings if the unit belongs to the list of technologies provided in
+                                this parameter
 
-    :return:           Dataframe with the time series for each unit
+    :return:                    Dataframe with the time series for each unit
     """
 
     paths = {}
