@@ -293,7 +293,8 @@ def load_config_excel(ConfigFile, AbsPath=True):
               'PriceDemandOrder', 'PriceSimpleOrder', 'PriceBlockOrder', 'PriceFlexibleOrder',
               'PlayersDemandSide', 'PlayersSupplySide', 'Interconnections', 'NTC',
               'NodeHourlyRampUp', 'NodeHourlyRampDown', 'NodeDailyRampUp', 'NodeDailyRampDown',
-              'LineHourlyRampUp', 'LineHourlyRampDown', 'LineDailyRampUp', 'LineDailyRampDown']
+              'LineHourlyRampUp', 'LineHourlyRampDown', 'LineDailyRampUp', 'LineDailyRampDown',
+              'StorageInFlows', 'StorageProfiles']
     for i, param in enumerate(params):
         config[param] = sheet.cell_value(61 + i, 2)
 

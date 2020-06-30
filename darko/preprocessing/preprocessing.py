@@ -96,7 +96,7 @@ def build_simulation(config):
     # check plant list:
     check_units(config, plants)
     # If not present, add the non-compulsory fields to the units table:
-    for key in ['StorageCapacity', 'StorageSelfDischarge', 'StorageMaxChargingPower',
+    for key in ['StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity',
                 'StorageChargingEfficiency']:
         if key not in plants.columns:
             plants[key] = np.nan
@@ -105,6 +105,17 @@ def build_simulation(config):
     plants_sto = plants[[u in commons['tech_storage'] for u in plants['Technology']]]
     # check storage plants:
     check_sto(config, plants_sto)
+
+    ReservoirLevels = UnitBasedTable(plants_sto, config['StorageProfiles'],
+                                     idx_utc_noloc, config['zones'],
+                                     fallbacks=['Unit', 'Technology', 'Zone'],
+                                     tablename='ReservoirLevels',
+                                     default=0)
+    ReservoirScaledInflows = UnitBasedTable(plants_sto, config['StorageInFlows'],
+                                            idx_utc_noloc, config['zones'],
+                                            fallbacks=['Unit', 'Technology', 'Zone'],
+                                            tablename='ReservoirScaledInflows',
+                                            default=0)
 
     '''Demand side'''
     demands = pd.DataFrame()
@@ -121,7 +132,7 @@ def build_simulation(config):
     # check demands list:
     check_demands(config, demands)
     # If not present, add the non-compulsory fields to the units table:
-    for key in ['StorageCapacity', 'StorageSelfDischarge', 'StorageMaxChargingPower', 'StorageChargingEfficiency']:
+    for key in ['StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity', 'StorageChargingEfficiency']:
         if key not in demands.columns:
             demands[key] = np.nan
 
@@ -257,6 +268,11 @@ def build_simulation(config):
              name='NodeHourlyRampUp')
     check_df(NodeHourlyRampDown, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
              name='NodeHourlyRampDown')
+    # Storage
+    check_df(ReservoirLevels, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+             name='ReservoirLevels')
+    check_df(ReservoirScaledInflows, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+             name='ReservoirScaledInflows')
 
     # %%%
 
@@ -277,6 +293,8 @@ def build_simulation(config):
     LineHourlyRampDown = LineHourlyRampDown.reindex(idx_long, method='nearest').fillna(method='bfill')
     NodeHourlyRampUp = NodeHourlyRampUp.reindex(idx_long, method='nearest').fillna(method='bfill')
     NodeHourlyRampDown = NodeHourlyRampDown.reindex(idx_long, method='nearest').fillna(method='bfill')
+    ReservoirLevels = ReservoirLevels.reindex(idx_long, method='nearest').fillna(method='bfill')
+    ReservoirScaledInflows = ReservoirScaledInflows.reindex(idx_long, method='nearest').fillna(method='bfill')
     #    for key in FuelPrices:
     #        FuelPrices[key] = FuelPrices[key].reindex(idx_long, method='nearest').fillna(method='bfill')
     #    ReservoirLevels_merged = ReservoirLevels_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
@@ -346,9 +364,15 @@ def build_simulation(config):
                   'NodeInitial': ['n'],
                   'LineInitial': ['l'],
                   'StorageCapacity': ['s'],
-                  'StorageMaxChargingPower': ['s'],
+                  'StorageChargingCapacity': ['s'],
                   'StorageChargingEfficiency': ['s'],
-                  'StorageSelfDischarge': ['s']
+                  'StorageDischargeEfficiency': ['s'],
+                  'StorageSelfDischarge': ['s'],
+                  'StorageInflow': ['s','h'],
+                  'StorageInitial': ['s'],
+                  'StorageMinimum': ['s'],
+                  'StorageOutflow': ['s', 'h'],
+                  'StorageProfile': ['s','h']
                   }
 
     # Define all the parameters and set a default value of zero:
@@ -398,26 +422,42 @@ def build_simulation(config):
     #            parameters[var]['val'] = Plants_merged[var].values
 
     # List of parameters whose value is known, and provided in the dataframe Plants_sto.
-    for var in ['StorageCapacity', 'StorageMaxChargingPower', 'StorageChargingEfficiency']:
+    for var in ['StorageCapacity', 'StorageChargingCapacity', 'StorageChargingEfficiency', 'StorageSelfDischarge']:
         parameters[var]['val'] = plants_sto[var].values
 
     # The storage discharge efficiency is actually given by the unit efficiency:
-    parameters['StorageSelfDischarge']['val'] = plants_sto['Efficiency'].values
-    #
-    #    # Storage profile and initial state:
-    #    for i, s in enumerate(sets['s']):
-    #        if s in ReservoirLevels_merged:
-    #            # get the time
-    #            parameters['StorageInitial']['val'][i] = ReservoirLevels_merged[s][idx_long[0]] * \
-    #                                                     Plants_sto['StorageCapacity'][s] * Plants_sto['Nunits'][s]
-    #            parameters['StorageProfile']['val'][i, :] = ReservoirLevels_merged[s][idx_long].values
-    #            if any(ReservoirLevels_merged[s] > 1):
-    #                logging.warning(s + ': The reservoir level is sometimes higher than its capacity!')
-    #        else:
-    #            logging.warning( 'Could not find reservoir level data for storage plant ' + s + '. Assuming 50% of capacity')
-    #            parameters['StorageInitial']['val'][i] = 0.5 * Plants_sto['StorageCapacity'][s]
-    #            parameters['StorageProfile']['val'][i, :] = 0.5
-    #
+    parameters['StorageDischargeEfficiency']['val'] = plants_sto['Efficiency'].values
+
+    # Storage profile and initial state:
+    for i, s in enumerate(sets['s']):
+        if s in ReservoirLevels and any(ReservoirLevels[s] > 0) and all(ReservoirLevels[s] -1 <= 1e-11):
+            # get the time series
+            parameters['StorageProfile']['val'][i, :] = ReservoirLevels[s][idx_long].values
+        elif s in ReservoirLevels and any(ReservoirLevels[s] > 0) and any(ReservoirLevels[s] -1 > 1e-11):
+            logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
+            sys.exit(1)
+        else:
+            logging.warning(
+                'Could not find reservoir level data for storage plant ' + s + '. Using the provided default initial '
+                                                                               'and final values')
+            # parameters['StorageProfile']['val'][i, :] = np.linspace(config['default']['ReservoirLevelInitial'],
+            #                                                         config['default']['ReservoirLevelFinal'],
+            #                                                         len(idx_long))
+            parameters['StorageProfile']['val'][i, :] = np.linspace(0,
+                                                                    0,
+                                                                    len(idx_long))
+        # The initial level is the same as the first value of the profile:
+        parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
+                                                 plants_sto.loc[plants_sto['Unit'] == s]['StorageCapacity']
+                                                 # plants_sto['StorageCapacity'][s]
+                                                 # finalTS['AvailabilityFactors'][s][idx_long[0]] * \
+                                                 # * plants_sto['Nunits'][s]
+
+    # Storage Inflows:
+    for i, s in enumerate(sets['s']):
+        if s in ReservoirScaledInflows:
+            parameters['StorageInflow']['val'][i, :] = ReservoirScaledInflows[s][idx_long].values * \
+                                                       plants_sto.loc[plants_sto['Unit'] == s]['PowerCapacity'].values
 
     # %%#################################################################################################################################################################################################
 

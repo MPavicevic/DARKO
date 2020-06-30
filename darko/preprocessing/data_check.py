@@ -123,7 +123,7 @@ def check_sto(config, plants,raw_data=True):
     Function that checks the storage plant characteristics
     """
     if raw_data:
-        keys = ['StorageCapacity','StorageSelfDischarge','StorageMaxChargingPower',
+        keys = ['StorageCapacity','StorageSelfDischarge','StorageChargingCapacity',
                 'StorageChargingEfficiency']
         NonNaNKeys = ['StorageCapacity']
     else:
