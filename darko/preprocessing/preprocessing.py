@@ -310,7 +310,7 @@ def build_simulation(config):
     # The sets are defined within a dictionary:
     sets = {'d': demands['Unit'].tolist(),
             'u': plants['Unit'].tolist(),
-            'o': ['Simple', 'Block', 'Flexible'],
+            'o': ['Simple', 'Block', 'Flexible', 'Storage'],
             'n': config['zones'],
             'l': Interconnections,
             't': commons['Technologies'],

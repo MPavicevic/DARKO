@@ -66,42 +66,66 @@ Alias(o,oo);
 Alias(sk,sksk);
 
 PARAMETERS
+* Configuration of the simulation environment
 Config
+
+* Availabilities
 AccaptanceBlockOrdersMin(u)              [%]      Accaptance ratio for block orders
 AvailabilityFactorDemandOrder(d,h)       [%]      Share of maximum demand in time period h
 AvailabilityFactorSimpleOrder(u,h)       [%]      Share of maximum Simple order in time period h
 AvailabilityFactorBlockOrder(u,h)        [%]      Share of maximum Block order in time period h
 AvailabilityFactorFlexibleOrder(u)       [%]      Accaptance ratio for block orders
-MaxDemand(d)                             [MW\u]   Maximum demand
-Fuel(u,f)                                [n.a.]   Fuel type              {1 0}
+
+* Node data
 LocationDemandSide(d,n)                  [n.a.]   Location               {1 0}
 LocationSupplySide(u,n)                  [n.a.]   Location               {1 0}
-OrderType(u,o)                           [n.a.]   Order type             {1 0}
-PowerCapacity(u)                         [MW\u]   Installed capacity
+NodeHourlyRampUp(n, h)                   [%\h\n]  Node ramp up limit
+NodeHourlyRampDown(n, h)                 [%\h\n]  Node ramp down limit
+NodeDailyRampUp(n)                       [%\24h\n] Node daily ramp up limit
+NodeDailyRampDown(n)                     [%\24h\n] Node daily ramp up limit
+NodeInitial(n)
+
+* Prices
 PriceDemandOrder(d,h)                    [€\MW]   Price ofer of the consumer d in time period h
 PriceSimpleOrder(u,h)                    [€\MW]   Price ofer of the simple order u in time period h
 PriceBlockOrder(u)                       [€\MW]   Default block order price
 PriceFlexibleOrder(u)                    [€\MW]   Default block order price
-Sector(d,sk)                             [n.a.]   Demand sector type     {1 0}
-Technology(u,t)                          [n.a.]   Technology type        {1 0}
+
+* Interconection lines
 LineNode(l,n)                            [n.a.]   Incidence matrix       {-1 +1}
 FlowMaximum(l,h)                         [MW]     Line limits
 FlowMinimum(l,h)                         [MW]     Minimum flow
-UnitRampUp(u)
-UnitRampDown(u)
-NodeHourlyRampUp(n, h)
-NodeHourlyRampDown(n, h)
-NodeDailyRampUp(n)
-NodeDailyRampDown(n)
-LineHourlyRampUp(l, h)
-LineHourlyRampDown(l, h)
-LineDailyRampUp(l)
-LineDailyRampDown(l)
+LineHourlyRampUp(l, h)                   [%\h\n]  Interconection line ramp up limit
+LineHourlyRampDown(l, h)                 [%\h\n]  Interconection line ramp down limit
+LineDailyRampUp(l)                       [%\24h\n] Interconection daily line ramp up limit
+LineDailyRampDown(l)                     [%\24h\n] Interconection daily line ramp down limit
+LineInitial(l)
+
+* Units / demands
+MaxDemand(d)                             [MW\u]   Maximum demand
+PowerCapacity(u)                         [MW\u]   Installed capacity
+OrderType(u,o)                           [n.a.]   Order type             {1 0}
+Technology(u,t)                          [n.a.]   Technology type        {1 0}
+Fuel(u,f)                                [n.a.]   Fuel type              {1 0}
+Sector(d,sk)                             [n.a.]   Demand sector type     {1 0}
+UnitRampUp(u)                            [%\h\u]  Unit ramp up limit
+UnitRampDown(u)                          [%\h\u]  Unit ramp down limit
 LinkedBlockOrderIncidenceMatrix(u)
 MinimumIncomeFixed(u)
 MinimumIncomeVariable(u)
-LineInitial(l)
-NodeInitial(n)
+
+* Storage
+StorageChargingCapacity(s)               [MW\u]   Storage capacity
+StorageChargingEfficiency(s)             [%]      Charging efficiency
+StorageSelfDischarge(s)                  [%\day]  Self-discharge of the storage units
+StorageCapacity(s)                       [MWh\u]    Storage capacity
+StorageDischargeEfficiency(s)            [%]      Discharge efficiency
+StorageOutflow(s,h)                      [MWh\u]    Storage outflows
+StorageInflow(s,h)                       [MWh\u]    Storage inflows (potential energy)
+StorageInitial(s)                        [MWh]    Storage level before initial period
+StorageProfile(s,h)                      [%]      Storage level to be resepected at the end of each horizon
+StorageMinimum(s)                        [MWh]    Storage minimum
+StorageFinalMin(s)               [MWh]   Minimum storage level at the end of the optimization horizon
 ;
 
 * Scalar variables necessary to the loop:
@@ -159,6 +183,16 @@ $LOAD LineHourlyRampUp
 $LOAD LineHourlyRampDown
 $LOAD LineInitial
 $LOAD NodeInitial
+$LOAD StorageChargingCapacity
+$LOAD StorageChargingEfficiency
+$LOAD StorageDischargeEfficiency
+$LOAD StorageSelfDischarge
+$LOAD StorageCapacity
+$LOAD StorageInflow
+$LOAD StorageInitial
+$LOAD StorageProfile
+$LOAD StorageMinimum
+$LOAD StorageOutflow
 ;
 
 Display
@@ -206,7 +240,16 @@ LineDailyRampDown,
 LineHourlyRampUp,
 LineHourlyRampDown,
 LineInitial,
-NodeInitial
+NodeInitial,
+StorageChargingCapacity,
+StorageChargingEfficiency,
+StorageSelfDischarge,
+StorageCapacity,
+StorageInflow,
+StorageInitial,
+StorageProfile,
+StorageMinimum,
+StorageOutflow
 ;
 
 *===============================================================================
@@ -217,6 +260,10 @@ AcceptanceRatioOfDemandOrders(d,h)       [%]     acceptance ratio of demand orde
 AcceptanceRatioOfSimpleOrders(u,h)       [%]     acceptance ratio of simple orders
 AcceptanceRatioOfBlockOrders(u)          [%]     acceptance ratio of block orders
 Flow(l,h)                                [MW]    Flow through lines
+StorageInput(s,h)         [MWh]   Charging input for storage units
+StorageOutput(s,h)
+StorageLevel(s,h)         [MWh]   Storage level of charge
+spillage(s,h)              [MWh]   spillage from water reservoirs
 ;
 
 BINARY VARIABLE
@@ -263,6 +310,14 @@ EQ_Node_daily_ramp_down
 EQ_NetPositionRamp
 EQ_Unit_Ramp_Up
 EQ_Unit_Ramp_Down
+EQ_Storage_minimum
+EQ_Storage_level
+EQ_Storage_input
+EQ_Storage_output
+EQ_Storage_MaxDischarge
+EQ_Storage_MaxCharge
+EQ_Storage_balance
+EQ_Storage_boundaries
 ;
 
 * Objective function
@@ -281,7 +336,10 @@ EQ_PowerBalance_1(n,i)..
          sum(u, AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)*LocationSupplySide(u,n))
          + sum(u, AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,i)*PowerCapacity(u)*LocationSupplySide(u,n))
          + sum(u, ClearingStatusOfFlexibleOrder(u,i)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*LocationSupplySide(u,n))
-         - sum(d, AcceptanceRatioOfDemandOrders(d,i)*AvailabilityFactorDemandOrder(d,i)*MaxDemand(d)*LocationDemandSide(d,n));
+         - sum(d, AcceptanceRatioOfDemandOrders(d,i)*AvailabilityFactorDemandOrder(d,i)*MaxDemand(d)*LocationDemandSide(d,n))
+         - sum(s, StorageInput(s,i)*LocationSupplySide(s,n))
+         + sum(s, StorageOutput(s,i)*LocationSupplySide(s,n))
+;
 
 * Net position due to flows between two areas
 EQ_PowerBalance_2(n,i)..
@@ -399,6 +457,65 @@ EQ_Unit_Ramp_Down(u,i)$(sum(tr,Technology(u,tr))=0)..
          UnitRampDown(u)*PowerCapacity(u)
 ;
 
+* Storage Related Equations
+*Storage level must be above a minimum
+EQ_Storage_minimum(s,i)..
+         StorageMinimum(s)
+         =L=
+         StorageLevel(s,i)
+;
+
+*Storage level must be below storage capacity
+EQ_Storage_level(s,i)..
+         StorageLevel(s,i)
+         =L=
+         StorageCapacity(s)
+;
+
+* Storage charging is bounded by the maximum capacity
+EQ_Storage_input(s,i)..
+         StorageInput(s,i)
+         =L=
+         StorageChargingCapacity(s)
+;
+
+* Storage discharge is bounded by the maximum discharge capacity
+EQ_Storage_output(s,i)..
+         StorageOutput(s,i)
+         =L=
+         PowerCapacity(s)
+;
+
+*Discharge is limited by the storage level
+EQ_Storage_MaxDischarge(s,i)$(StorageCapacity(s)>PowerCapacity(s))..
+         StorageOutput(s,i)/(max(StorageDischargeEfficiency(s),0.0001))
+         =L=
+         StorageInitial(s)$(ord(i) = 1) + StorageLevel(s,i-1)$(ord(i) > 1)
+         + StorageInflow(s,i)
+;
+
+*Charging is limited by the remaining storage capacity
+EQ_Storage_MaxCharge(s,i)$(StorageCapacity(s)>PowerCapacity(s))..
+         StorageInput(s,i)*StorageChargingEfficiency(s)
+         =L=
+         (StorageCapacity(s)-StorageInitial(s))$(ord(i) = 1)
+         + (StorageCapacity(s) - StorageLevel(s,i-1))$(ord(i) > 1)
+         + StorageOutflow(s,i)
+;
+
+*Storage balance
+EQ_Storage_balance(s,i)..
+         StorageInitial(s)$(ord(i) = 1)
+         + StorageLevel(s,i-1)$(ord(i) > 1)
+         + StorageInflow(s,i)
+         + StorageInput(s,i)*StorageChargingEfficiency(s)
+         =E=
+         StorageLevel(s,i)
+         + StorageOutflow(s,i)
+         + spillage(s,i)
+         + StorageOutput(s,i)/(max(StorageDischargeEfficiency(s),0.0001))
+;
+
 
 
 
@@ -425,6 +542,14 @@ EQ_Node_daily_ramp_up
 EQ_Node_daily_ramp_down
 EQ_Unit_Ramp_Up
 EQ_Unit_Ramp_Down
+EQ_Storage_minimum
+EQ_Storage_level
+EQ_Storage_input
+EQ_Storage_output
+EQ_Storage_MaxDischarge
+EQ_Storage_MaxCharge
+EQ_Storage_balance
+*EQ_Storage_boundaries
 /;
 
 *===============================================================================
@@ -473,6 +598,10 @@ FOR(day = 1 TO ndays-Config("RollingHorizon LookAhead","day") by Config("Rolling
          i(h)$(ord(h)>=firsthour and ord(h)<=lasthour)=yes;
          display day,FirstHour,LastHour,LastKeptHour;
 
+*        Defining the minimum level at the end of the horizon :
+         StorageFinalMin(s) =  sum(i$(ord(i)=card(i)),StorageProfile(s,i)*StorageCapacity(s));
+
+
 SOLVE DARKO using MIP MAXIMIZE TotalWelfare;
 
 $If %Verbose% == 0
@@ -480,6 +609,8 @@ Display EQ_Welfare.L, EQ_PowerBalance_1.M, EQ_PowerBalance_2.M, EQ_PowerBalance_
 
          status("model",i) = DARKO.Modelstat;
          status("solver",i) = DARKO.Solvestat;
+
+StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
 
 *Loop variables to display after solving:
 $If %Verbose% == 1 Display LastKeptHour;
@@ -502,6 +633,12 @@ OutputAcceptanceRatioOfSimpleOrders(u,h)
 OutputClearingStatusOfFlexibleOrder(u,h)
 OutputFlow(l,h)
 OutputMarginalPrice(n,h)
+
+OutputStorageMarginalPrice(s,h)
+OutputStorageInput(s,h)
+OutputStorageOutput(s,h)
+OutputStorageLevel(s,h)
+OutputSpillage(s,h)
 ;
 
 OutputAcceptanceRatioOfDemandOrders(d,z) = AcceptanceRatioOfDemandOrders.L(d,z);
@@ -509,6 +646,12 @@ OutputAcceptanceRatioOfSimpleOrders(u,z) = AcceptanceRatioOfSimpleOrders.L(u,z);
 OutputClearingStatusOfFlexibleOrder(u,z) = ClearingStatusOfFlexibleOrder.L(u,z);
 OutputFlow(l,z) = Flow.L(l,z);
 OutputMarginalPrice(n,z) = EQ_PowerBalance_1.m(n,z);
+
+OutputStorageMarginalPrice(s,z) = EQ_Storage_balance.m(s,z);
+OutputStorageInput(s,z) = StorageInput.L(s,z);
+OutputStorageOutput(s,z) = StorageOutput.L(s,z);
+OutputStorageLevel(s,z) = StorageLevel.L(s,z);
+OutputSpillage(s,z) = spillage.L(s,z);
 
 EXECUTE_UNLOAD "Results.gdx"
 OutputAcceptanceRatioOfDemandOrders,
@@ -519,6 +662,11 @@ OutputClearingStatusOfFlexibleOrder,
 OutputFlow,
 OutputMarginalPrice,
 OutputTotalWelfare,
+OutputStorageInput,
+OutputStorageOutput,
+OutputStorageLevel,
+OutputSpillage,
+OutputStorageMarginalPrice,
 status
 ;
 
@@ -545,3 +693,8 @@ EQ_Node_hourly_ramp_up.L
 EQ_Node_hourly_ramp_down.L
 EQ_Node_daily_ramp_up.L
 EQ_Node_daily_ramp_down.L
+StorageInput.L
+StorageOutput.L
+StorageLevel.L
+spillage.L
+EQ_Storage_balance.m
