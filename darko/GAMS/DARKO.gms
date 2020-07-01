@@ -264,6 +264,7 @@ StorageInput(s,h)         [MWh]   Charging input for storage units
 StorageOutput(s,h)
 StorageLevel(s,h)         [MWh]   Storage level of charge
 spillage(s,h)              [MWh]   spillage from water reservoirs
+WaterSlack(s)             [MWh]   Unsatisfied water level constraint at end of optimization period
 ;
 
 BINARY VARIABLE
@@ -327,7 +328,8 @@ EQ_Welfare ..
          sum((d,i), AcceptanceRatioOfDemandOrders(d,i)*AvailabilityFactorDemandOrder(d,i)*MaxDemand(d)*PriceDemandOrder(d,i))
          - sum((u,i), AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)*PriceSimpleOrder(u,i))
          - sum((u,i), AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,i)*PowerCapacity(u)*PriceBlockOrder(u))
-         - sum((u,i), ClearingStatusOfFlexibleOrder(u,i)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*PriceFlexibleOrder(u));
+         - sum((u,i), ClearingStatusOfFlexibleOrder(u,i)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*PriceFlexibleOrder(u))
+         - 1000 * sum(s,WaterSlack(s));
 
 * Neat position of each area
 EQ_PowerBalance_1(n,i)..
@@ -516,7 +518,12 @@ EQ_Storage_balance(s,i)..
          + StorageOutput(s,i)/(max(StorageDischargeEfficiency(s),0.0001))
 ;
 
-
+* Minimum level at the end of the optimization horizon:
+EQ_Storage_boundaries(s,i)$(ord(i) = card(i))..
+         StorageFinalMin(s)
+         =L=
+         StorageLevel(s,i) + WaterSlack(s)
+;
 
 
 *===============================================================================
@@ -549,7 +556,7 @@ EQ_Storage_output
 EQ_Storage_MaxDischarge
 EQ_Storage_MaxCharge
 EQ_Storage_balance
-*EQ_Storage_boundaries
+EQ_Storage_boundaries
 /;
 
 *===============================================================================
@@ -612,6 +619,9 @@ Display EQ_Welfare.L, EQ_PowerBalance_1.M, EQ_PowerBalance_2.M, EQ_PowerBalance_
 
 StorageInitial(s) =   sum(i$(ord(i)=LastKeptHour-FirstHour+1),StorageLevel.L(s,i));
 
+* Assigning waterslack (one value per optimization horizon) to the last element of storageslack
+*StorageSlack.L(s,i)$(ord(i)=LastKeptHour-FirstHour+1) =StorageSlack.L(s,i)+ Waterslack.L(s);
+
 *Loop variables to display after solving:
 $If %Verbose% == 1 Display LastKeptHour;
 
@@ -633,6 +643,8 @@ OutputAcceptanceRatioOfSimpleOrders(u,h)
 OutputClearingStatusOfFlexibleOrder(u,h)
 OutputFlow(l,h)
 OutputMarginalPrice(n,h)
+OutputNetPositionOfBiddingArea(n,h)
+OutputTempNetPositionOfBiddingArea(n,h)
 
 OutputStorageMarginalPrice(s,h)
 OutputStorageInput(s,h)
@@ -646,6 +658,8 @@ OutputAcceptanceRatioOfSimpleOrders(u,z) = AcceptanceRatioOfSimpleOrders.L(u,z);
 OutputClearingStatusOfFlexibleOrder(u,z) = ClearingStatusOfFlexibleOrder.L(u,z);
 OutputFlow(l,z) = Flow.L(l,z);
 OutputMarginalPrice(n,z) = EQ_PowerBalance_1.m(n,z);
+OutputNetPositionOfBiddingArea(n,z) = NetPositionOfBiddingArea.L(n,z);
+OutputTempNetPositionOfBiddingArea(n,z) = TemporaryNetPositionOfBiddingArea.L(n,z);
 
 OutputStorageMarginalPrice(s,z) = EQ_Storage_balance.m(s,z);
 OutputStorageInput(s,z) = StorageInput.L(s,z);
@@ -661,6 +675,8 @@ OutputClearingStatusOfBlockOrder,
 OutputClearingStatusOfFlexibleOrder,
 OutputFlow,
 OutputMarginalPrice,
+OutputNetPositionOfBiddingArea,
+OutputTempNetPositionOfBiddingArea,
 OutputTotalWelfare,
 OutputStorageInput,
 OutputStorageOutput,
