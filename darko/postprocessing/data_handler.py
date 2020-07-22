@@ -105,10 +105,15 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False,
     index = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq='h')
     index_long = pd.date_range(start=dt.datetime(*StartDate), end=StopDate_long, freq='h')
 
+    frequency = str(inputs['config']['HorizonLength']) + 'd'
+    index_sim = pd.date_range(start=dt.datetime(*StartDate), end=dt.datetime(*StopDate), freq=frequency)
+
     keys = ['OutputMarginalPrice']  # 'status'
 
     keys_sparse = ['OutputFlow', 'OutputAcceptanceRatioOfDemandOrders', 'OutputAcceptanceRatioOfSimpleOrders',
-                   'OutputClearingStatusOfFlexibleOrder']
+                   'OutputClearingStatusOfFlexibleOrder',
+                   'OutputNetPositionOfBiddingArea', 'OutputTempNetPositionOfBiddingArea',
+                   'OutputStorageInput', 'OutputStorageOutput', 'OutputStorageLevel', 'OutputStorageMarginalPrice']
 
     keys_iteration = ['OutputAcceptanceRatioOfBlockOrders', 'OutputClearingStatusOfBlockOrder', 'OutputTotalWelfare']
 
@@ -133,6 +138,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False,
     for key in keys_iteration:
         if key in results:
             results[key] = results[key]
+            results[key].index = index_sim
         else:
             results[key] = 0
 
@@ -160,6 +166,16 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False,
     status['status'] = results.pop('status')
 
     out = (inputs, results)
+
+    writer = pd.ExcelWriter(inputs['config']['SimulationDirectory'] + '/Results.xlsx', engine='xlsxwriter')
+    for df_name, df in results.items():
+        if isinstance(df, int):
+            logging.warning(df_name + ': Has no output, variable is probably not used within the model, if not sure '
+                                      'check the Results.gdx file')
+        else:
+            df_name = df_name.replace("Output", "")
+            df.to_excel(writer, sheet_name=df_name)
+    writer.save()
 
     if return_status:
         return out + (status,)

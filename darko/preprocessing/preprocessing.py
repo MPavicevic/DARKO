@@ -107,12 +107,12 @@ def build_simulation(config):
     check_sto(config, plants_sto)
 
     ReservoirLevels = UnitBasedTable(plants_sto, config['StorageProfiles'],
-                                     idx_utc_noloc, config['zones'],
+                                     idx_utc_year_noloc, config['zones'],
                                      fallbacks=['Unit', 'Technology', 'Zone'],
                                      tablename='ReservoirLevels',
                                      default=0)
     ReservoirScaledInflows = UnitBasedTable(plants_sto, config['StorageInFlows'],
-                                            idx_utc_noloc, config['zones'],
+                                            idx_utc_year_noloc, config['zones'],
                                             fallbacks=['Unit', 'Technology', 'Zone'],
                                             tablename='ReservoirScaledInflows',
                                             default=0)
@@ -138,38 +138,38 @@ def build_simulation(config):
 
     # Load:
     AFDemandOrder = UnitBasedTable(demands, config['QuantityDemandOrder'],
-                                   idx_utc_noloc, config['zones'],
+                                   idx_utc_year_noloc, config['zones'],
                                    fallbacks=['Unit'],
                                    tablename='AvailabilityFactorsDemandOrder',
                                    default=0)
     AFSimpleOrder = UnitBasedTable(plants, config['QuantitySimpleOrder'],
-                                   idx_utc_noloc, config['zones'],
+                                   idx_utc_year_noloc, config['zones'],
                                    fallbacks=['Unit', 'Technology'],
                                    tablename='AvailabilityFactorsSimpleOrder',
                                    default=0)
     AFBlockOrder = UnitBasedTable(plants, config['QuantityBlockOrder'],
-                                  idx_utc_noloc, config['zones'],
+                                  idx_utc_year_noloc, config['zones'],
                                   fallbacks=['Unit', 'Technology'],
                                   tablename='AvailabilityFactorsBlockOrder',
                                   default=0)
 
     # Price:
     PriceDemandOrder = UnitBasedTable(demands, config['PriceDemandOrder'],
-                                      idx_utc_noloc, config['zones'],
+                                      idx_utc_year_noloc, config['zones'],
                                       fallbacks=['Unit'],
                                       tablename='PriceDemandOrder',
                                       default=0)
     PriceSimpleOrder = UnitBasedTable(plants, config['PriceSimpleOrder'],
-                                      idx_utc_noloc, config['zones'],
+                                      idx_utc_year_noloc, config['zones'],
                                       fallbacks=['Unit', 'Technology'],
                                       tablename='PriceSimpleOrder',
                                       default=0)
 
     # Daily node based ramping rates TODO: Make a function that loads only single values for each zone instead of this
-    NodeDailyRampUp = NodeBasedTable(config['NodeDailyRampUp'], idx_utc_noloc,
+    NodeDailyRampUp = NodeBasedTable(config['NodeDailyRampUp'], idx_utc_year_noloc,
                                      config['zones'], tablename='NodeDailyRampUp',
                                      default=config['default']['NodeDailyRampUp'])
-    NodeDailyRampDown = NodeBasedTable(config['NodeDailyRampDown'], idx_utc_noloc,
+    NodeDailyRampDown = NodeBasedTable(config['NodeDailyRampDown'], idx_utc_year_noloc,
                                        config['zones'], tablename='NodeDailyRampDown',
                                        default=config['default']['NodeDailyRampDown'])
     NodeDailyRamp = pd.DataFrame([NodeDailyRampUp.iloc[0], NodeDailyRampDown.iloc[0]],
@@ -180,10 +180,10 @@ def build_simulation(config):
     NodeDailyRamp.reset_index(inplace=True)
 
     # Hourly node based ramping rates
-    NodeHourlyRampUp = NodeBasedTable(config['NodeHourlyRampUp'], idx_utc_noloc,
+    NodeHourlyRampUp = NodeBasedTable(config['NodeHourlyRampUp'], idx_utc_year_noloc,
                                       config['zones'], tablename='NodeHourlyRampUp',
                                       default=config['default']['NodeHourlyRampUp'])
-    NodeHourlyRampDown = NodeBasedTable(config['NodeHourlyRampDown'], idx_utc_noloc,
+    NodeHourlyRampDown = NodeBasedTable(config['NodeHourlyRampDown'], idx_utc_year_noloc,
                                         config['zones'], tablename='NodeHourlyRampDown',
                                         default=config['default']['NodeHourlyRampDown'])
     # Adjust to the fraction of max capacity
@@ -195,17 +195,17 @@ def build_simulation(config):
         flows = load_csv(config['Interconnections'], index_col=0, parse_dates=True).fillna(0)
     else:
         logging.warning('No historical flows will be considered (no valid file provided)')
-        flows = pd.DataFrame(index=idx_utc_noloc)
+        flows = pd.DataFrame(index=idx_utc_year_noloc)
     if os.path.isfile(config['NTC']):
         ntc = load_csv(config['NTC'], index_col=0, parse_dates=True).fillna(0)
     else:
         logging.warning('No NTC values will be considered (no valid file provided)')
-        ntc = pd.DataFrame(index=idx_utc_noloc)
+        ntc = pd.DataFrame(index=idx_utc_year_noloc)
 
-    LineDailyRampUp = NodeBasedTable(config['LineDailyRampUp'], idx_utc_noloc,
+    LineDailyRampUp = NodeBasedTable(config['LineDailyRampUp'], idx_utc_year_noloc,
                                      list(ntc.columns), tablename='LineDailyRampUp',
                                      default=config['default']['LineDailyRampUp'])
-    LineDailyRampDown = NodeBasedTable(config['LineDailyRampDown'], idx_utc_noloc,
+    LineDailyRampDown = NodeBasedTable(config['LineDailyRampDown'], idx_utc_year_noloc,
                                        list(ntc.columns), tablename='LineDailyRampDown',
                                        default=config['default']['LineDailyRampDown'])
     LineDailyRamp = pd.DataFrame([LineDailyRampUp.iloc[0], LineDailyRampDown.iloc[0]],
@@ -215,10 +215,10 @@ def build_simulation(config):
     LineDailyRamp.reset_index(inplace=True)
 
     # Interconnection ramping rates
-    LineHourlyRampUp = NodeBasedTable(config['LineHourlyRampUp'], idx_utc_noloc,
+    LineHourlyRampUp = NodeBasedTable(config['LineHourlyRampUp'], idx_utc_year_noloc,
                                       list(ntc.columns), tablename='LineHourlyRampUp',
                                       default=config['default']['LineHourlyRampUp'])
-    LineHourlyRampDown = NodeBasedTable(config['LineHourlyRampDown'], idx_utc_noloc,
+    LineHourlyRampDown = NodeBasedTable(config['LineHourlyRampDown'], idx_utc_year_noloc,
                                         list(ntc.columns), tablename='LineHourlyRampDown',
                                         default=config['default']['LineHourlyRampDown'])
     # Adjust to the fraction of max capacity
@@ -234,51 +234,51 @@ def build_simulation(config):
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], ntc, flows)
 
     if len(Interconnections_sim.columns) > 0:
-        ntcs = Interconnections_sim.reindex(idx_utc_noloc)
+        ntcs = Interconnections_sim.reindex(idx_utc_year_noloc)
     else:
-        ntcs = pd.DataFrame(index=idx_utc_noloc)
-    Inter_RoW = Interconnections_RoW.reindex(idx_utc_noloc)
+        ntcs = pd.DataFrame(index=idx_utc_year_noloc)
+    Inter_RoW = Interconnections_RoW.reindex(idx_utc_year_noloc)
 
     # %%
     # checking data
     # Availability factors
-    check_df(AFDemandOrder, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(AFDemandOrder, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='AvailabilityFactorsDemandOrder')
-    check_df(AFBlockOrder, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(AFBlockOrder, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='AvailabilityFactorsBlockOrder')
-    check_df(AFSimpleOrder, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(AFSimpleOrder, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='AvailabilityFactorsSimpleOrder')
     # Prices
-    check_df(PriceDemandOrder, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(PriceDemandOrder, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='PriceDemandOrder')
-    check_df(PriceSimpleOrder, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(PriceSimpleOrder, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='PriceSimpleOrder')
     # Interconnections
-    check_df(Inter_RoW, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(Inter_RoW, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='Inter_RoW')
-    check_df(ntcs, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(ntcs, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='NTCs')
     # Line ramping rates
-    check_df(LineHourlyRampUp, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(LineHourlyRampUp, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='LineHourlyRampUp')
-    check_df(LineHourlyRampDown, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(LineHourlyRampDown, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='LineHourlyRampDown')
     # Node ramping rates
-    check_df(NodeHourlyRampUp, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(NodeHourlyRampUp, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='NodeHourlyRampUp')
-    check_df(NodeHourlyRampDown, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(NodeHourlyRampDown, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='NodeHourlyRampDown')
     # Storage
-    check_df(ReservoirLevels, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(ReservoirLevels, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='ReservoirLevels')
-    check_df(ReservoirScaledInflows, StartDate=idx_utc_noloc[0], StopDate=idx_utc_noloc[-1],
+    check_df(ReservoirScaledInflows, StartDate=idx_utc_year_noloc[0], StopDate=idx_utc_year_noloc[-1],
              name='ReservoirScaledInflows')
 
     # %%%
 
     # Extending the data to include the look-ahead period (with constant values assumed)
-    enddate_long = idx_utc_noloc[-1] + dt.timedelta(days=config['LookAhead'])
-    idx_long = pd.DatetimeIndex(pd.date_range(start=idx_utc_noloc[0], end=enddate_long, freq=commons['TimeStep']))
+    enddate_long = idx_utc_year_noloc[-1] + dt.timedelta(days=config['LookAhead'])
+    idx_long = pd.DatetimeIndex(pd.date_range(start=idx_utc_year_noloc[0], end=enddate_long, freq=commons['TimeStep']))
     Nhours_long = len(idx_long)
 
     # re-indexing with the longer index and filling possibly missing data at the beginning and at the end::

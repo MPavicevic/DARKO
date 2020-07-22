@@ -155,10 +155,10 @@ def UnitBasedTable(plants, path, idx, zones, fallbacks=['Unit'], tablename='', d
             if SingleFile:
                 for key in tmp:
                     data[key] = tmp[key]
-            else:  # use the multi-index header with the zone
+            else:  # use the multi-index header within the zone
                 for key in tmp:
                     columns.append((z, key))
-                    data[z + ',' + key] = tmp[key]
+                    data[z + ',' + key] = tmp[key].copy()
         if not SingleFile:
             data.columns = pd.MultiIndex.from_tuples(columns, names=['Zone', 'Data'])
         # For each plant and each fallback key, try to find the corresponding column in the data

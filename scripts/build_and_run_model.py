@@ -35,10 +35,7 @@ r = dk.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 # Load the simulation results:
 inputs, results = dk.get_sim_results(config['SimulationDirectory'], cache=False)
 
-import pandas as pd
-import xlsxwriter
-writer = pd.ExcelWriter(config['SimulationDirectory'] + '/Results.xlsx', engine='xlsxwriter')
-for df_name, df in results.items():
-    df_name = df_name.replace("Output", "")
-    df.to_excel(writer, sheet_name=df_name)
-writer.save()
+import matplotlib.pyplot as plt
+
+results['OutputMarginalPrice'].plot()
+plt.show()
