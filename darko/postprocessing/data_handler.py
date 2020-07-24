@@ -115,7 +115,8 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False,
                    'OutputNetPositionOfBiddingArea', 'OutputTempNetPositionOfBiddingArea',
                    'OutputStorageInput', 'OutputStorageOutput', 'OutputStorageLevel', 'OutputStorageMarginalPrice']
 
-    keys_iteration = ['OutputAcceptanceRatioOfBlockOrders', 'OutputClearingStatusOfBlockOrder', 'OutputTotalWelfare']
+    keys_iteration = ['OutputAcceptanceRatioOfBlockOrders', 'OutputClearingStatusOfBlockOrder', 'OutputTotalWelfare',
+                      'OutputDailyNetPositionOfBiddingArea']
 
     # Setting the proper index to the result dataframes:
     from itertools import chain

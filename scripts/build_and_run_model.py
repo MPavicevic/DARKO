@@ -35,7 +35,8 @@ r = dk.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 # Load the simulation results:
 inputs, results = dk.get_sim_results(config['SimulationDirectory'], cache=False)
 
-import matplotlib.pyplot as plt
-
-results['OutputMarginalPrice'].plot()
-plt.show()
+# Plot Net Positions
+import pandas as pd
+rng = pd.date_range('2016-1-1','2016-1-9',freq='h')
+dk.plot_net_positions(dk.get_net_position_plot_data(inputs,results,z='Z2'),rng=rng)
+dk.plot_net_positions(dk.get_net_position_plot_data(inputs,results,z='Z2'))

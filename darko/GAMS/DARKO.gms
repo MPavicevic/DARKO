@@ -276,6 +276,7 @@ FREE VARIABLE
 TotalWelfare                                     total welfate
 NetPositionOfBiddingArea(n,h)            [EUR]   net position of bidding area
 TemporaryNetPositionOfBiddingArea(n,h)   [EUR]   net position of bidding area
+DailyNetPositionOfBiddingArea(n)
 ;
 
 *===============================================================================
@@ -308,6 +309,7 @@ EQ_Node_hourly_ramp_up
 EQ_Node_hourly_ramp_down
 EQ_Node_daily_ramp_up
 EQ_Node_daily_ramp_down
+EQ_DailyNetPositionOfBiddingArea
 EQ_NetPositionRamp
 EQ_Unit_Ramp_Up
 EQ_Unit_Ramp_Down
@@ -444,6 +446,12 @@ EQ_Node_daily_ramp_down(n)..
          NodeDailyRampDown(n)
 ;
 
+EQ_DailyNetPositionOfBiddingArea(n)..
+         DailyNetPositionOfBiddingArea(n)
+         =E=
+         sum(i, NetPositionOfBiddingArea(n,i))
+;
+
 * Ramping rates are bound by maximum ramp up and down MW/min
 EQ_Unit_Ramp_Up(u,i)$(sum(tr,Technology(u,tr))=0)..
          AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)
@@ -547,6 +555,7 @@ EQ_Node_hourly_ramp_up
 EQ_Node_hourly_ramp_down
 EQ_Node_daily_ramp_up
 EQ_Node_daily_ramp_down
+EQ_DailyNetPositionOfBiddingArea
 EQ_Unit_Ramp_Up
 EQ_Unit_Ramp_Down
 EQ_Storage_minimum
@@ -593,6 +602,7 @@ PARAMETER
 OutputAcceptanceRatioOfBlockOrders(u, nlp)
 OutputClearingStatusOfBlockOrder(u, nlp)
 OutputTotalWelfare(nlp)
+OutputDailyNetPositionOfBiddingArea(n,nlp)
 ;
 
 cloop = 0
@@ -631,6 +641,7 @@ display cloop;
 OutputAcceptanceRatioOfBlockOrders(u, nlp)$(ord(nlp) = cloop) = AcceptanceRatioOfBlockOrders.L(u);
 OutputClearingStatusOfBlockOrder(u, nlp)$(ord(nlp) = cloop)   = ClearingStatusOfBlockOrder.L(u);
 OutputTotalWelfare(nlp)$(ord(nlp) = cloop) = TotalWelfare.L;
+OutputDailyNetPositionOfBiddingArea(n,nlp)$(ord(nlp) = cloop) = DailyNetPositionOfBiddingArea.L(n);
 );
 
 *===============================================================================
@@ -642,10 +653,12 @@ OutputAcceptanceRatioOfDemandOrders(d,h)
 OutputAcceptanceRatioOfSimpleOrders(u,h)
 OutputClearingStatusOfFlexibleOrder(u,h)
 OutputFlow(l,h)
+* Prices
 OutputMarginalPrice(n,h)
 OutputNetPositionOfBiddingArea(n,h)
 OutputTempNetPositionOfBiddingArea(n,h)
 
+* Storage outputs
 OutputStorageMarginalPrice(s,h)
 OutputStorageInput(s,h)
 OutputStorageOutput(s,h)
@@ -683,6 +696,7 @@ OutputStorageOutput,
 OutputStorageLevel,
 OutputSpillage,
 OutputStorageMarginalPrice,
+OutputDailyNetPositionOfBiddingArea,
 status
 ;
 
