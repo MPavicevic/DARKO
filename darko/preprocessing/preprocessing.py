@@ -533,6 +533,9 @@ def build_simulation(config):
     # Output folder:
     sim = config['SimulationDirectory']
 
+    # Clean SimData
+    demands.set_index('Unnamed: 0', drop=True, inplace=True)
+
     # Simulation data:
     SimData = {'sets': sets,
                'parameters': parameters,

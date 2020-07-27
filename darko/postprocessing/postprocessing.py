@@ -16,6 +16,28 @@ from ..common import commons
 from .data_handler import dk_to_df
 
 
+# Helper functions
+def listToString(s):
+    """
+    Convert list to string with blank spaces in between the list elements
+
+    :param s: list of strings
+    :return:  whole string
+    """
+    str1 = " "
+    return (str1.join(s))
+
+
+def round_down(x, y):
+    """
+    Round number x to nearest integer of y multiplier
+    :param x:  input number
+    :param y:  multiplier
+    :return:   integer
+    """
+    return int(x - (x % y))
+
+
 def filter_by_zone(OutputData, inputs, z):
     """
     This function filters the Outputs dataframe by zone
@@ -61,6 +83,7 @@ def get_imports(flows, z):
     return NetImports
 
 
+# Data analysis for plots
 def get_net_position_plot_data(inputs, results, z):
     """
     Function that analyzes net position data
@@ -98,6 +121,51 @@ def get_net_position_plot_data(inputs, results, z):
     return data, data_all, z
 
 
+def get_marginal_price_plot_data(inputs, results, zones):
+    """
+    Plot marginal price in selected zones
+
+    :param inputs:
+    :param results:
+    :param zones:
+    :return:
+    """
+    mcp = results['OutputMarginalPrice'].loc[:, zones]
+    volume = pd.DataFrame()
+    for z in zones:
+        tmp = results['OutputAcceptanceRatioOfDemandOrders'].loc[
+              :, inputs['demands'].loc[inputs['demands']['Zone'].isin([z])]['Unit']] * \
+              inputs['demands'].loc[inputs['demands']['Zone'].isin([z])]['MaxDemand'].sum()
+        volume.loc[:, z] = tmp.sum(axis=1)
+
+    idx_short = pd.DatetimeIndex(pd.date_range(start=dt.datetime(*inputs['config']['StartDate']),
+                                               end=dt.datetime(*inputs['config']['StopDate']),
+                                               freq=str(inputs['config']['HorizonLength']) + 'd'))
+    idx = pd.DatetimeIndex(pd.date_range(start=dt.datetime(*inputs['config']['StartDate']),
+                                         end=dt.datetime(*inputs['config']['StopDate']),
+                                         freq='h'))
+
+    tmp_mcp = mcp.copy().reset_index(drop=True)
+    tmp_baseline = mcp * volume
+    tmp_baseline.reset_index(drop=True, inplace=True)
+    tmp_vol = volume.copy().reset_index(drop=True)
+    step = inputs['config']['HorizonLength'] * 24
+    price = {'mean': pd.DataFrame(tmp_mcp.groupby(tmp_mcp.index // step).mean().set_index(idx_short),
+                                  index=idx, columns=mcp.columns),
+             'min': pd.DataFrame(tmp_mcp.groupby(tmp_mcp.index // step).min().set_index(idx_short),
+                                 index=idx, columns=mcp.columns),
+             'max': pd.DataFrame(tmp_mcp.groupby(tmp_mcp.index // step).max().set_index(idx_short),
+                                 index=idx, columns=mcp.columns),
+             'baseline': pd.DataFrame(tmp_baseline.groupby(tmp_baseline.index // step).sum().set_index(idx_short) /
+                                      tmp_vol.groupby(tmp_vol.index // step).sum().set_index(idx_short),
+                                      index=idx, columns=mcp.columns)}
+    for p in list(price):
+        price[p].ffill(inplace=True)
+
+    return mcp, volume, price
+
+
+# Plotting functions
 def plot_net_positions(data, rng=None, alpha=0.7, figsize=(10, 5)):
     """
     Plot net positions in the selected zone
@@ -117,10 +185,12 @@ def plot_net_positions(data, rng=None, alpha=0.7, figsize=(10, 5)):
     elif not type(rng) == type(data[1].index):
         logging.error('The "rng" variable must be a pandas DatetimeIndex')
         raise ValueError()
-    elif rng[0] < data[0].index[0] or rng[0] > data[0].index[-1] or rng[-1] < data[0].index[0] or rng[-1] > data[0].index[-1]:
+    elif rng[0] < data[0].index[0] or rng[0] > data[0].index[-1] or rng[-1] < data[0].index[0] or rng[-1] > \
+            data[0].index[-1]:
         logging.warning('Plotting range is not properly defined, considering the first simulated week')
         pdrng = data[0].index[:min(len(data[0]) - 1, 7 * 24)]
-    elif rng[0] < data[1].index[0] or rng[0] > data[1].index[-1] or rng[-1] < data[1].index[0] or rng[-1] > data[1].index[-1]:
+    elif rng[0] < data[1].index[0] or rng[0] > data[1].index[-1] or rng[-1] < data[1].index[0] or rng[-1] > \
+            data[1].index[-1]:
         logging.warning('Plotting range is not properly defined, considering the first simulated week')
         pdrng_day = data[1].index[:min(len(data[1]) - 1, 7 * 24)]
     else:
@@ -147,62 +217,92 @@ def plot_net_positions(data, rng=None, alpha=0.7, figsize=(10, 5)):
     axes[1].grid(True)
     plt.show()
 
-def get_marginal_price_plot_data(inputs, results, zones):
-    """
-    Plot marginal price in selected zones
 
-    :param inputs:
-    :param results:
-    :param zones:
+def plot_market_clearing_price(data, rng=None, alpha=0.7, figsize=(10, 7.5)):
+    """
+    Plot market clearing price and mcp statistics
+
+    :param data:     output from get_marginal_price_plot_data function
+    :param rng:      plot range
+    :param alpha:    color alopha
+    :param figsize:  figure size
     :return:
     """
-    mcp = results['OutputMarginalPrice'].loc[:, zones]
-
-    return mcp
-
-def plot_market_clearing_price(data, rng, alpha=0.7, figsize=(10, 5)):
-    """
-
-    :param data:
-    :param rng:
-    :param alpha:
-    :param figsize:
-    :return:
-    """
-
     from matplotlib.pyplot import cm
 
+    mcp, vol, price = data
+
     if rng is None:
-        pdrng = data.index[:min(len(data) - 1, 7 * 24)]
-    elif not type(rng) == type(data.index):
+        pdrng = mcp.index[:min(len(mcp) - 1, 7 * 24)]
+    elif not type(rng) == type(mcp.index):
         logging.error('The "rng" variable must be a pandas DatetimeIndex')
         raise ValueError()
-    elif rng[0] < data.index[0] or rng[0] > data.index[-1] or rng[-1] < data.index[0] or rng[-1] > data.index[-1]:
+    elif rng[0] < mcp.index[0] or rng[0] > mcp.index[-1] or rng[-1] < mcp.index[0] or rng[-1] > mcp.index[-1]:
         logging.warning('Plotting range is not properly defined, considering the first simulated week')
-        pdrng = data.index[:min(len(data) - 1, 7 * 24)]
+        pdrng = mcp.index[:min(len(mcp) - 1, 7 * 24)]
     else:
         pdrng = rng
 
-    fig, axes = plt.subplots(nrows=2, ncols=1, sharex=False, figsize=figsize, frameon=True,
+    # Mcp - Volume plot
+    fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=figsize, frameon=True,
                              gridspec_kw={'height_ratios': [1, 1], 'hspace': 0.2})
 
-    color = iter(cm.rainbow(np.linspace(0, 1, len(data.columns))))
-    for z in data.columns:
+    color = iter(cm.rainbow(np.linspace(0, 1, len(mcp.columns))))
+    for z in mcp.columns:
         c = next(color)
-        axes[0].plot(pdrng, data.loc[pdrng, z].values, color=c)
+        axes[0].plot(pdrng, mcp.loc[pdrng, z].values, color=c)
+        axes[1].bar(pdrng, vol.loc[pdrng, z].values, color=c, alpha=alpha, width=1 / (len(pdrng) + 1))
+
     axes[0].set_ylabel('MCP [EUR/MWh]')
-    axes[0].set_title('Market Clearing Price in ' + listToString(data.columns))
+    axes[0].set_title('Market Clearing Price in ' + listToString(mcp.columns))
     axes[0].axhline(linewidth=1, color='gray')
     axes[0].grid(True)
-
+    axes[1].set_title('Traded volume in ' + listToString(mcp.columns))
+    axes[1].set_ylabel('Volume [MWh]')
     plt.show()
 
+    # MCP - volume histograms
+    fig1, axes = plt.subplots(nrows=2, ncols=1, sharex=False, figsize=figsize, frameon=True,
+                              gridspec_kw={'height_ratios': [1, 1], 'hspace': 0.2})
+    color = iter(cm.rainbow(np.linspace(0, 1, len(mcp.columns))))
+    for z in mcp.columns:
+        c = next(color)
+        axes[0].hist(mcp.loc[pdrng, z].values, color=c, alpha=alpha,
+                     bins=2 * round_down(mcp.max().max() - mcp.min().min(), 5),
+                     range=(mcp.min().min(), mcp.max().max()), rwidth=0.9)
+        axes[1].hist(vol.loc[pdrng, z].values, color=c, alpha=alpha,
+                     bins=2 * round_down(mcp.max().max() - mcp.min().min(), 5),
+                     range=(vol.min().min(), vol.max().max()), rwidth=0.9)
+    axes[0].set_xlabel('MCP Bins [EUR/MWh]')
+    axes[0].set_ylabel('Frequency')
+    axes[0].grid(True)
 
-def listToString(s):
-    # initialize an empty string
-    str1 = " "
+    axes[1].set_xlabel('Traded Volume Bins [MWh]')
+    axes[1].set_ylabel('Frequency')
+    axes[1].grid(True)
+    plt.show()
 
-    # return string
-    return (str1.join(s))
+    # MCP in individual zones
+    columns = 1
+    rows = int(len(mcp.columns) / columns) + (len(mcp.columns) % columns > 0)
+    fig = plt.figure(figsize=figsize, constrained_layout=True)
+    spec = fig.add_gridspec(nrows=rows, ncols=columns)
 
-
+    j = 0
+    for row in range(rows):
+        for col in range(columns):
+            i = list(mcp.columns)[j]
+            bb = pd.DataFrame([mcp.loc[pdrng, i],price['min'].loc[pdrng, i],price['max'].loc[pdrng, i],
+                              price['mean'].loc[pdrng, i],price['baseline'].loc[pdrng, i]])
+            labels = ['MCP','min', 'max', 'mean', 'baseline']
+            bb = bb.T
+            bb.columns = labels
+            ax = fig.add_subplot(spec[row, col])
+            handles = ax.plot(bb.loc[pdrng, :])
+            ax.set_ylabel('MCP [EUR/MWh]')
+            ax.set_ylim(price['min'].min().min()*0.95, price['max'].max().max() * 1.05)
+            j=j+1
+    labels = ['MCP', 'min', 'max', 'mean', 'baseline']
+    plt.legend(handles, labels,loc='center left', bbox_to_anchor=(1.02, 0.8))
+    plt.show()
+    return mcp, vol

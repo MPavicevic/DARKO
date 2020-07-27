@@ -85,6 +85,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False,
     inputs['units'].index = clean_strings(inputs['units'].index.tolist())
     inputs['demands'].index = clean_strings(inputs['demands'].index.tolist())
 
+
     # Add the formated parameters in the inputs variable if not already present:
     if not 'param_df' in inputs:
         inputs['param_df'] = dk_to_df(inputs)

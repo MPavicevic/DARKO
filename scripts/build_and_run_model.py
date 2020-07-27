@@ -13,16 +13,17 @@ This script runs the DARKO model. The main steps are:
 # Add the root folder of DARKO to the path so that the library can be loaded:
 import os
 import sys
-
-sys.path.append(os.path.abspath('..'))
+import pandas as pd
 
 # Import Dispa-SET
 import darko as dk
+# Automatically set absolute path to the working directory (..DARKO/)
+sys.path.append(os.path.abspath('..'))
 
 # Load the configuration file
 config = dk.load_config_excel('../ConfigFiles/ConfigTest.xlsx')
 
-# Limit the simulation period (for testing purposes, comment the line to run the whole year)
+# Limit the simulation period (for testing purposes, comment the line to run the range from the config file)
 # config['StartDate'] = (2016, 1, 1, 0, 0, 0)
 # config['StopDate'] = (2016, 1, 7, 0, 0, 0)
 
@@ -36,7 +37,10 @@ r = dk.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 inputs, results = dk.get_sim_results(config['SimulationDirectory'], cache=False)
 
 # Plot Net Positions
-import pandas as pd
-rng = pd.date_range('2016-1-1','2016-1-9',freq='h')
-dk.plot_net_positions(dk.get_net_position_plot_data(inputs,results,z='Z2'),rng=rng)
-dk.plot_net_positions(dk.get_net_position_plot_data(inputs,results,z='Z2'))
+rng = pd.date_range('2016-1-1', '2016-1-2', freq='h')
+# dk.plot_net_positions(dk.get_net_position_plot_data(inputs,results,z='Z2'),rng=rng)
+dk.plot_net_positions(dk.get_net_position_plot_data(inputs, results, z='Z1'))
+
+# Plot Market Clearing Price
+# dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones = ['Z1', 'Z2'])),rng=rng)
+mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1', 'Z2'])))
