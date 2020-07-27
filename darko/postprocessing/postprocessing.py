@@ -6,7 +6,6 @@ Set of functions useful to analyse to DispaSET output data.
 
 import datetime as dt
 import logging
-import sys
 
 import numpy as np
 import pandas as pd
@@ -275,6 +274,7 @@ def plot_market_clearing_price(data, rng=None, alpha=0.7, figsize=(10, 7.5)):
                      range=(vol.min().min(), vol.max().max()), rwidth=0.9)
     axes[0].set_xlabel('MCP Bins [EUR/MWh]')
     axes[0].set_ylabel('Frequency')
+    axes[0].set_title('MCP and volume histograms in ' + listToString(mcp.columns))
     axes[0].grid(True)
 
     axes[1].set_xlabel('Traded Volume Bins [MWh]')
@@ -292,17 +292,19 @@ def plot_market_clearing_price(data, rng=None, alpha=0.7, figsize=(10, 7.5)):
     for row in range(rows):
         for col in range(columns):
             i = list(mcp.columns)[j]
-            bb = pd.DataFrame([mcp.loc[pdrng, i],price['min'].loc[pdrng, i],price['max'].loc[pdrng, i],
-                              price['mean'].loc[pdrng, i],price['baseline'].loc[pdrng, i]])
-            labels = ['MCP','min', 'max', 'mean', 'baseline']
+            bb = pd.DataFrame([mcp.loc[pdrng, i], price['min'].loc[pdrng, i], price['max'].loc[pdrng, i],
+                               price['mean'].loc[pdrng, i], price['baseline'].loc[pdrng, i]])
+            labels = ['MCP', 'min', 'max', 'mean', 'baseline']
             bb = bb.T
             bb.columns = labels
             ax = fig.add_subplot(spec[row, col])
             handles = ax.plot(bb.loc[pdrng, :])
             ax.set_ylabel('MCP [EUR/MWh]')
-            ax.set_ylim(price['min'].min().min()*0.95, price['max'].max().max() * 1.05)
-            j=j+1
+            ax.set_ylim(price['min'].min().min() * 0.95, price['max'].max().max() * 1.05)
+            ax.grid(True)
+            ax.set_title('Market Clearing Price in ' + i)
+            j = j + 1
     labels = ['MCP', 'min', 'max', 'mean', 'baseline']
-    plt.legend(handles, labels,loc='center left', bbox_to_anchor=(1.02, 0.8))
+    plt.legend(handles, labels, loc='center left', bbox_to_anchor=(1.02, 0.8))
     plt.show()
     return mcp, vol

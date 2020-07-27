@@ -37,10 +37,10 @@ r = dk.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 inputs, results = dk.get_sim_results(config['SimulationDirectory'], cache=False)
 
 # Plot Net Positions
-rng = pd.date_range('2016-1-1', '2016-1-2', freq='h')
+rng = pd.date_range('2016-1-1', '2016-1-5', freq='h')
 # dk.plot_net_positions(dk.get_net_position_plot_data(inputs,results,z='Z2'),rng=rng)
 dk.plot_net_positions(dk.get_net_position_plot_data(inputs, results, z='Z1'))
 
 # Plot Market Clearing Price
-# dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones = ['Z1', 'Z2'])),rng=rng)
-mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1', 'Z2'])))
+mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones = ['Z1', 'Z2'])),rng=rng)
+# mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1', 'Z2'])))
