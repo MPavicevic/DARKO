@@ -42,5 +42,5 @@ rng = pd.date_range('2016-1-1', '2016-1-5', freq='h')
 dk.plot_net_positions(dk.get_net_position_plot_data(inputs, results, z='Z1'))
 
 # Plot Market Clearing Price
-mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones = ['Z1', 'Z2'])),rng=rng)
+mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1', 'Z2'])), rng=rng)
 # mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1', 'Z2'])))

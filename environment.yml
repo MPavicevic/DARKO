@@ -20,3 +20,4 @@ dependencies:
     - gamsxcc
     - optcc
     - setuptools_scm
+    - mplfinance

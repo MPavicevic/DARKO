@@ -158,10 +158,26 @@ def get_marginal_price_plot_data(inputs, results, zones):
              'baseline': pd.DataFrame(tmp_baseline.groupby(tmp_baseline.index // step).sum().set_index(idx_short) /
                                       tmp_vol.groupby(tmp_vol.index // step).sum().set_index(idx_short),
                                       index=idx, columns=mcp.columns)}
+
+    bb = mcp.loc[idx_short + dt.timedelta(hours=inputs['config']['HorizonLength'] * 24 - 1), :]
+    bb.reset_index(drop=True, inplace=True)
+    cstck = {'open': mcp.loc[idx_short,:],
+                   'high': price['max'].loc[idx_short,:],
+                   'low': price['min'].loc[idx_short,:],
+                   'close': bb.set_index(idx_short),
+                   'volume': tmp_vol.groupby(tmp_vol.index // step).sum().set_index(idx_short)}
+
+    price_cstc = {}
+    cols = ['open','high','low','close','volume']
+    for z in mcp.columns:
+        price_cstc[z] = pd.concat([cstck['open'][z],cstck['high'][z],cstck['low'][z],cstck['close'][z],
+                                      cstck['volume'][z]], axis=1)
+        price_cstc[z].columns = cols
+
     for p in list(price):
         price[p].ffill(inplace=True)
 
-    return mcp, volume, price
+    return mcp, volume, price, price_cstc
 
 
 # Plotting functions
@@ -228,8 +244,9 @@ def plot_market_clearing_price(data, rng=None, alpha=0.7, figsize=(10, 7.5)):
     :return:
     """
     from matplotlib.pyplot import cm
+    import mplfinance as mpf
 
-    mcp, vol, price = data
+    mcp, vol, price, price_cstc = data
 
     if rng is None:
         pdrng = mcp.index[:min(len(mcp) - 1, 7 * 24)]
@@ -285,8 +302,8 @@ def plot_market_clearing_price(data, rng=None, alpha=0.7, figsize=(10, 7.5)):
     # MCP in individual zones
     columns = 1
     rows = int(len(mcp.columns) / columns) + (len(mcp.columns) % columns > 0)
-    fig = plt.figure(figsize=figsize, constrained_layout=True)
-    spec = fig.add_gridspec(nrows=rows, ncols=columns)
+    fig2 = plt.figure(figsize=figsize, constrained_layout=True)
+    spec = fig2.add_gridspec(nrows=rows, ncols=columns)
 
     j = 0
     for row in range(rows):
@@ -297,7 +314,7 @@ def plot_market_clearing_price(data, rng=None, alpha=0.7, figsize=(10, 7.5)):
             labels = ['MCP', 'min', 'max', 'mean', 'baseline']
             bb = bb.T
             bb.columns = labels
-            ax = fig.add_subplot(spec[row, col])
+            ax = fig2.add_subplot(spec[row, col])
             handles = ax.plot(bb.loc[pdrng, :])
             ax.set_ylabel('MCP [EUR/MWh]')
             ax.set_ylim(price['min'].min().min() * 0.95, price['max'].max().max() * 1.05)
@@ -307,4 +324,18 @@ def plot_market_clearing_price(data, rng=None, alpha=0.7, figsize=(10, 7.5)):
     labels = ['MCP', 'min', 'max', 'mean', 'baseline']
     plt.legend(handles, labels, loc='center left', bbox_to_anchor=(1.02, 0.8))
     plt.show()
+
+    # Candle plot
+    mc = mpf.make_marketcolors(up='palegreen', down='c',
+                               edge='inherit',
+                               wick='black',
+                               volume='in',
+                               ohlc='i')
+    s = mpf.make_mpf_style(marketcolors=mc)
+
+    for i in list(price_cstc):
+        mpf.plot(price_cstc[i], type='candle', mav=(2, 4, 6), volume=True, figratio=(10, 4), style=s,
+                 title='Market movement in ' + i, figsize=figsize)
+        plt.show()
+
     return mcp, vol
