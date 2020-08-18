@@ -339,3 +339,32 @@ def plot_market_clearing_price(data, rng=None, alpha=0.7, figsize=(10, 7.5)):
         plt.show()
 
     return mcp, vol
+
+
+def get_market_clearing_data(inputs, results, zone, time):
+
+    vol_dem = inputs['demands'].loc[inputs['demands']['Zone'] == zone]['MaxDemand'] * \
+              inputs['param_df']['AvailabilityFactorDemandOrder'].loc[:,
+              inputs['param_df']['AvailabilityFactorDemandOrder'].columns.isin(list(
+                  inputs['demands'].loc[inputs['demands']['Zone'] == zone].index))]
+    vol_dem.index = results['OutputMarginalPrice'].index
+    price_dem =  inputs['param_df']['PriceDemandOrder'].loc[:,
+                 inputs['param_df']['PriceDemandOrder'].columns.isin(list(
+                     inputs['demands'].loc[inputs['demands']['Zone'] == zone].index))]
+    price_dem.index = results['OutputMarginalPrice'].index
+
+    def lspc(price, volume):
+        return np.linspace(price,price,volume).T
+
+    aa = pd.DataFrame()
+    for z in vol_dem.columns:
+        tmp = pd.DataFrame(lspc(price_dem.loc[time,z],int(vol_dem.loc[time,z])))
+        aa = aa.append(tmp,ignore_index=True)
+
+    plt.plot(aa, label="Supply Curve")
+    # plt.plot(q, D(q), label="Demand Curve")
+    plt.title("Supply and Demand")
+    plt.legend(frameon=False)
+    plt.xlabel("Quantity $q$")
+    plt.ylabel("Price")
+    plt.show()
