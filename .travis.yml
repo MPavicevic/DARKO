@@ -42,7 +42,7 @@ install:
 
 # Run the tests
 script:
-  - coverage run -m pytest --cov
+  - pytest --cov-report term --cov=darko tests/
 
 # Push the results back to codecov
 after_success:
