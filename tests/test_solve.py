@@ -25,8 +25,7 @@ def test_build(config, tmpdir):
 @pytest.mark.skipif('TRAVIS' in os.environ,
                     reason='This test is too long for the demo GAMS license version which is currently installed in Travis')
 def test_solve_gams(config):
-    # from darko.misc.gdx_handler import get_gams_path
-    # r = dk.solve_GAMS(config['SimulationDirectory'], get_gams_path())
+    # Test solve function
     r = dk.solve_GAMS(config['SimulationDirectory'])
 
     assert r

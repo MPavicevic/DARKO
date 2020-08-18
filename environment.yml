@@ -21,3 +21,5 @@ dependencies:
     - optcc
     - setuptools_scm
     - mplfinance
+    - pytest-cov pytest
+    - codecov
