@@ -36,3 +36,6 @@ install:
 - conda env create -q -f environment.yml
 - source activate darko
 - python setup.py develop
+
+script:
+- pytest
