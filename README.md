@@ -1,4 +1,7 @@
 ![Image of License](https://img.shields.io/badge/license-EUPL%20v1.2-blue)
+[![Build Status](https://travis-ci.com/MPavicevic/DARKO.svg?branch=master)](https://travis-ci.com/MPavicevic/DARKO)
+[![codecov](https://codecov.io/gh/MPavicevic/DARKO/branch/master/graph/badge.svg)](https://codecov.io/gh/MPavicevic/DARKO)
+
 
 DARKO
 =======
