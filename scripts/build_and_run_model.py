@@ -44,12 +44,3 @@ dk.plot_net_positions(dk.get_net_position_plot_data(inputs, results, z='Z1'))
 # Plot Market Clearing Price
 # mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1'])), rng=rng)
 mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1', 'Z2'])))
-
-
-from chord import Chord
-names = ['Z1', 'Z2', 'Z3']
-matrix = [[0, round(results['OutputFlow'].sum()[0]/1000, 0), 0],
-          [round(results['OutputFlow'].sum()[1]/1000, 0), 0, 0],
-          [10, 0, 0]]
-html_obj = Chord(matrix, names, colors="d3.schemeSet3").to_html(filename="C:/Users/Matija/Desktop/test.html")
-
