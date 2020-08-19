@@ -131,10 +131,6 @@ def build_simulation(config):
 
     # check demands list:
     check_demands(config, demands)
-    # If not present, add the non-compulsory fields to the units table:
-    for key in ['StorageCapacity', 'StorageSelfDischarge', 'StorageChargingCapacity', 'StorageChargingEfficiency']:
-        if key not in demands.columns:
-            demands[key] = np.nan
 
     # Load:
     AFDemandOrder = UnitBasedTable(demands, config['QuantityDemandOrder'],
@@ -393,11 +389,11 @@ def build_simulation(config):
         parameters[var]['val'] = demands[var].values
 
     # List of parameters whose value is know and provided for each zone
-    for var in ['NodeDailyRampUp', 'NodeDailyRampDown']:
-        parameters[var]['val'] = NodeDailyRamp[var].values
-
-    for var in ['LineDailyRampUp', 'LineDailyRampDown']:
-        parameters[var]['val'] = LineDailyRamp[var].values
+    for var in ['NodeDailyRampUp', 'NodeDailyRampDown', 'LineDailyRampUp', 'LineDailyRampDown']:
+        if var in ['NodeDailyRampUp', 'NodeDailyRampDown']:
+            parameters[var]['val'] = NodeDailyRamp[var].values
+        if var in ['LineDailyRampUp', 'LineDailyRampDown']:
+            parameters[var]['val'] = LineDailyRamp[var].values
 
     # List of parameters whose value is known, and provided in the availability factors.
     for i, d in enumerate(sets['d']):
