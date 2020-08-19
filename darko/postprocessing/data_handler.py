@@ -58,7 +58,7 @@ def GAMSstatus(statustype, num):  # TODO: Check if this is ok
 
 
 def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False,
-                    return_status=False):  # TODO: Check if it works
+                    return_status=False, write_excel = True):  # TODO: Check if it works
     """
     This function reads the simulation environment folder once it has been solved and loads
     the input variables together with the results.
@@ -169,15 +169,16 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False,
 
     out = (inputs, results)
 
-    writer = pd.ExcelWriter(inputs['config']['SimulationDirectory'] + '/Results.xlsx', engine='xlsxwriter')
-    for df_name, df in results.items():
-        if isinstance(df, int):
-            logging.warning(df_name + ': Has no output, variable is probably not used within the model, if not sure '
-                                      'check the Results.gdx file')
-        else:
-            df_name = df_name.replace("Output", "")
-            df.to_excel(writer, sheet_name=df_name)
-    writer.save()
+    if write_excel is True:
+        writer = pd.ExcelWriter(inputs['config']['SimulationDirectory'] + '/Results.xlsx', engine='xlsxwriter')
+        for df_name, df in results.items():
+            if isinstance(df, int):
+                logging.warning(df_name + ': Has no output, variable is probably not used within the model, if not '
+                                          'sure check the Results.gdx file')
+            else:
+                df_name = df_name.replace("Output", "")
+                df.to_excel(writer, sheet_name=df_name)
+        writer.save()
 
     if return_status:
         return out + (status,)
