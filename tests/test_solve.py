@@ -1,7 +1,5 @@
 import os
-
 import pytest
-
 import darko as dk
 
 conf_file = os.path.abspath('./tests/ConfigTest.xlsx')
@@ -23,9 +21,9 @@ def test_build(config, tmpdir):
 
 
 @pytest.mark.skipif('TRAVIS' in os.environ,
-                    reason='This test is too long for the demo GAMS license version which is currently installed in Travis')
+                    reason='This test is too long for the demo GAMS license version which is currently installed '
+                           'in Travis')
 def test_solve_gams(config):
     # Test solve function
     r = dk.solve_GAMS(config['SimulationDirectory'])
-
     assert r

@@ -15,6 +15,20 @@ import pandas as pd
 from ..misc.str_handler import clean_strings, shrink_to_64
 
 
+# Warning functions
+def warn_interconnection_1(data, var=''):
+    """
+    Warning if values inside the dataframe are negative
+    :param data:    dataframe
+    :param var:     name of the variable to be checked and highlighted in the warning message
+    :return:
+    """
+    if (data.values < 0).any():
+        pos = np.where(data.values < 0)
+        logging.warning('At least one ' + var + ' value is negative, for example in line ' + str(
+            data.columns[pos[1][0]]) + ' and time step ' + str(data.index[pos[0][0]]))
+
+
 def select_units(units, config):
     """
     Function returning a new list of units by removing the ones that have unknown
@@ -109,14 +123,9 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
             'are common. The intersection has been considered and ' + str(
                 diff) + ' data points have been lost')
     # Checking that all values are positive:
-    if (NTC_inter.values < 0).any():
-        pos = np.where(NTC_inter.values < 0)
-        logging.warning('WARNING: At least NTC value is negative, for example in line ' + str(
-            NTC_inter.columns[pos[1][0]]) + ' and time step ' + str(NTC_inter.index[pos[0][0]]))
-    if (Historical_flows.values < 0).any():
-        pos = np.where(Historical_flows.values < 0)
-        logging.warning('WARNING: At least one historical flow is negative, for example in line ' + str(
-            Historical_flows.columns[pos[1][0]]) + ' and time step ' + str(Historical_flows.index[pos[0][0]]))
+    warn_interconnection_1(NTC_inter, var='NTC')
+    warn_interconnection_1(Historical_flows, var='Historical flow')
+
     all_connections = []
     simulation_connections = []
     # List all connections from the dataframe headers:
