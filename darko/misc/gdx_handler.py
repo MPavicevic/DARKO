@@ -225,6 +225,18 @@ def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
 
     gdxOpenRead(gdxHandle, filename)
 
+    def res_1(nrRecs):
+        """
+        Returns res
+        :param nrRecs:
+        :return:
+        """
+        res = []
+        for i in range(nrRecs):
+            ret, elements, values, afdim = gdxDataReadStr(gdxHandle)
+            res.append(elements + [values[0]])
+        return res
+
     if varname == 'all':
         # go through all the symbols one by one and add their data to the dict
         symNr = 0
@@ -233,11 +245,7 @@ def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
             ret, nrRecs = gdxDataReadStrStart(gdxHandle, symNr)
             assert ret, "Error in gdx data string" + gdxErrorStr(gdxHandle, gdxGetLastError(gdxHandle))[1]
 
-            res = []
-            for i in range(nrRecs):
-                ret, elements, values, afdim = gdxDataReadStr(gdxHandle)
-                res.append(elements + [values[0]])
-            out[SymbolInfo[1]] = res
+            out[SymbolInfo[1]] = res_1(nrRecs)
             symNr += 1
             SymbolInfo = gdxSymbolInfo(gdxHandle, symNr)
     else:
@@ -248,11 +256,7 @@ def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
         ret, nrRecs = gdxDataReadStrStart(gdxHandle, symNr)
         assert ret, "Error in gdx data string" + gdxErrorStr(gdxHandle, gdxGetLastError(gdxHandle))[1]
 
-        res = []
-        for i in range(nrRecs):
-            ret, elements, values, afdim = gdxDataReadStr(gdxHandle)
-            res.append(elements + [values[0]])
-        out[varname] = res
+        out[varname] = res_1(nrRecs)
 
     gdxDataReadDone(gdxHandle)
     if verbose:
