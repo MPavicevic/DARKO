@@ -10,7 +10,7 @@ env:
   global:
     - GAMS=24.9
     - GAMS_URL=https://d37drm4t2jghv5.cloudfront.net/distributions/24.9.2/linux/linux_x64_64_sfx.exe
-
+    - CC_TEST_REPORTER_ID=40a9ebca5407585c256e96bfad99927a5d5d071c9c89b955c324ecc326b50f89
 
 before_install:
   - export MINICONDA=$HOME/miniconda
@@ -23,7 +23,6 @@ before_install:
   - conda info -a
   # Edit the environment.yml file for the target Python version
   - sed -i -E 's/(python=)(.*)/\1'$TRAVIS_PYTHON_VERSION'/' ./environment.yml
-
   # Install GAMS
   - wget -N $GAMS_URL -O gams.zip
   - unzip -qu gams.zip -d $HOME
@@ -33,6 +32,9 @@ before_install:
   - cd $HOME/gams
   - gamsinst -a
   - cd -
+  # Add codeclimate test reporter
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+  - chmod +x ./cc-test-reporter
 
 # Install required dependencies
 install:
@@ -40,9 +42,17 @@ install:
   - source activate darko
   - python setup.py develop
 
+# Before running the scripts
+before_script:
+  - ./cc-test-reporter before-build
+
 # Run the tests
 script:
   - pytest --cov-report term --cov=darko tests/
+
+# After script is carried out
+after_script:
+  - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
 
 # Push the results back to codecov
 after_success:
