@@ -13,10 +13,11 @@ import numpy as np
 import pandas as pd
 
 from ..misc.str_handler import clean_strings, shrink_to_64
+from ..common import commons
 
 
 # Warning functions
-def warn_interconnection_1(data, var=''):
+def warn_interconnection(data, var=''):
     """
     Warning if values inside the dataframe are negative
     :param data:    dataframe
@@ -32,48 +33,47 @@ def warn_interconnection_1(data, var=''):
 def select_units(units, config):
     """
     Function returning a new list of units by removing the ones that have unknown
-    technology, zero capacity, or unknown zone
+    technology, zero capacity or unknown zone
 
     :param units:       Pandas dataframe with the original list of units
     :param config:      DARKO config dictionary
     :return:            New list of units
     """
     for unit in units.index:
-        if units.loc[unit, 'Technology'] == 'Other':
-            logging.warning('Removed Unit ' + str(units.loc[unit, 'Unit']) + ' since its technology is unknown')
+        # Default strings
+        str1 = 'Removed Unit ' + str(units.loc[unit, 'Unit'])
+        if units.loc[unit, 'Technology'] not in commons['Technologies']:
+            logging.warning(str1 + ' since its technology is unknown')
             units.drop(unit, inplace=True)
         elif units.loc[unit, 'PowerCapacity'] == 0:
-            logging.warning('Removed Unit ' + str(units.loc[unit, 'Unit']) + ' since it has a null capacity')
+            logging.warning(str1 + ' since it has a null capacity')
             units.drop(unit, inplace=True)
         elif units.loc[unit, 'Zone'] not in config['zones']:
-            logging.warning('Removed Unit ' + str(units.loc[unit, 'Unit']) + ' since its zone (' + str(
-                units.loc[unit, 'Zone']) + ') is not in the list of zones')
+            logging.warning(str1 + ' since its zone (' + str(units.loc[unit, 'Zone']) + ') is not in the list of zones')
             units.drop(unit, inplace=True)
     units.index = range(len(units))
     return units
 
 
-def select_demands(units, config):
+def select_demands(demands, config):
     """
-    Function returning a new list of units by removing the ones that have unknown
-    technology, zero capacity, or unknown zone
+    Function returning a new list of demands by removing the ones that have unknown zone or zero capacity
 
-    :param units:       Pandas dataframe with the original list of units
+    :param demands:      Pandas dataframe with the original list of demands
     :param config:      DARKO config dictionary
-    :return:            New list of units
+    :return:            New list of demands
     """
-    for unit in units.index:
-        if units.loc[unit, 'MaxDemand'] == 0:
-            logging.warning('Removed Demand ' + str(units.loc[unit, 'Unit']) +
-                            ' since it has a null capacity')
-            units.drop(unit, inplace=True)
-        elif units.loc[unit, 'Zone'] not in config['zones']:
-            logging.warning('Removed Demand ' + str(units.loc[unit, 'Unit']) +
-                            ' since its zone (' + str(units.loc[unit, 'Zone']) +
-                            ') is not in the list of zones')
-            units.drop(unit, inplace=True)
-    units.index = range(len(units))
-    return units
+    for dem in demands.index:
+        # Default strings
+        str1 = 'Removed Demand ' + str(demands.loc[dem, 'Unit'])
+        if demands.loc[dem, 'MaxDemand'] == 0:
+            logging.warning(str1 + ' since it has a null capacity')
+            demands.drop(dem, inplace=True)
+        elif demands.loc[dem, 'Zone'] not in config['zones']:
+            logging.warning(str1 + ' since its zone (' + str(demands.loc[dem, 'Zone']) + ') is not in the list of zones')
+            demands.drop(dem, inplace=True)
+    demands.index = range(len(demands))
+    return demands
 
 
 def incidence_matrix(sets, set_used, parameters, param_used):
@@ -123,8 +123,8 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
             'are common. The intersection has been considered and ' + str(
                 diff) + ' data points have been lost')
     # Checking that all values are positive:
-    warn_interconnection_1(NTC_inter, var='NTC')
-    warn_interconnection_1(Historical_flows, var='Historical flow')
+    warn_interconnection(NTC_inter, var='NTC')
+    warn_interconnection(Historical_flows, var='Historical flow')
 
     all_connections = []
     simulation_connections = []
@@ -173,26 +173,29 @@ def interconnections(Simulation_list, NTC_inter, Historical_flows):
         nameToCompare = compare_set.pop()
         exports = []
         imports = []
+        str1 = 'Detected interconnection '
+        str2 = ', happening between a simulated zone and the rest of the world. The historical flows will be imposed ' \
+               'to the model'
         for name in connNames:
             if nameToCompare[0:2] in name[0:2]:
                 exports.append(connNames.index(name))
-                logging.info(
-                    'Detected interconnection ' + name + ', happening between a simulated zone and the rest of the '
-                                                         'world. The historical flows will be imposed to the model')
+                logging.info(str1 + name + str2)
             elif nameToCompare[0:2] in name[6:8]:
                 imports.append(connNames.index(name))
-                logging.info(
-                    'Detected interconnection ' + name + ', happening between the rest of the world and a simulated '
-                                                         'zone. The historical flows will be imposed to the model')
+                logging.info(str1 + name + str2)
 
-        flows_out = pd.concat(df_RoW_temp[connNames[exports[i]]] for i in range(len(exports)))
-        flows_out = flows_out.groupby(flows_out.index).sum()
-        flows_out.name = nameToCompare + ' -> RoW'
-        df_zones_RoW[nameToCompare + ' -> RoW'] = flows_out
-        flows_in = pd.concat(df_RoW_temp[connNames[imports[j]]] for j in range(len(imports)))
-        flows_in = flows_in.groupby(flows_in.index).sum()
-        flows_in.name = 'RoW -> ' + nameToCompare
-        df_zones_RoW['RoW -> ' + nameToCompare] = flows_in
+        def concat_imp_exp(variable, type):
+            flows = pd.concat(df_RoW_temp[connNames[variable[i]]] for i in range(len(variable)))
+            flows = flows.groupby(flows.index).sum()
+            if type == 'Export':
+                flows.name = nameToCompare + ' -> RoW'
+            elif type == 'Import':
+                flows.name = 'RoW -> ' + nameToCompare
+            return flows
+
+        df_zones_RoW[nameToCompare + ' -> RoW'] = concat_imp_exp(exports,'Export')
+        df_zones_RoW['RoW -> ' + nameToCompare] = concat_imp_exp(imports,'Import')
+
     interconnections2 = df_zones_RoW.columns
     inter = list(interconnections1) + list(interconnections2)
     return df_zones_simulated, df_zones_RoW, inter

@@ -1,3 +1,5 @@
 ,Unit,Zone,Sector,MaxDemand
 Z1_D1,Z1_D1,Z1,REZ,50
 Z1_D2,Z1_D2,Z1,IND,100
+Z1_D2_Remove_Zone,Z1_D2_Remove_Zone,Z7,IND,100
+Z1_D2_Remove_MaxDemand,Z1_D2_Remove_MaxDemand,Z1,IND,0
