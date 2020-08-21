@@ -22,7 +22,7 @@ from .utils import incidence_matrix, select_units, select_demands, interconnecti
 
 from .. import __version__
 from ..misc.gdx_handler import write_variables, gdx_to_list, gdx_to_dataframe
-from ..common import commons  # Load fuel types, technologies, timestep, etc:
+from ..common import commons, set_log_name  # Load fuel types, technologies, timestep, etc:
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
@@ -611,7 +611,6 @@ def build_simulation(config):
             pickle.dump(SimData, pfile, protocol=pickle.HIGHEST_PROTOCOL)
     logging.info('Build finished')
 
-    if os.path.isfile(commons['logfile']):
-        shutil.copy(commons['logfile'], os.path.join(sim, 'warn_preprocessing.log'))
+    set_log_name(sim, 'warn_preprocessing')
 
     return SimData

@@ -3,6 +3,8 @@
 This file defines a dictionary with global variables to be used in DARKO such as fluids, technologies, etc.
 """
 import datetime
+import os
+import shutil
 
 commons = {}
 # Timestep
@@ -55,3 +57,14 @@ def get_git_revision_tag():
         return check_output(["git", "describe", "--tags", "--always"]).strip()
     except:
         return 'NA'
+
+
+def set_log_name(sim_folder, name):
+    """
+    Sets log file name
+    :param sim:  sim folder
+    :param name: can be warn_preprocessing, warn_solve....
+    :return:
+    """
+    if os.path.isfile(commons['logfile']):
+        shutil.copy(commons['logfile'], os.path.join(sim_folder, name + '.log'))

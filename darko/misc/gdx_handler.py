@@ -14,15 +14,17 @@ Example:
 @author: Matija Pavičević
 
 """
-import platform
+import logging
 import os
+import platform
 import sys
 import time as tm
+
 import numpy as np
 import pandas as pd
-import logging
 
 from .str_handler import shrink_to_64, force_str
+
 
 def package_exists(package):
     # http://stackoverflow.com/questions/14050281/how-to-check-if-a-python-module-exists-without-importing-it
@@ -31,48 +33,53 @@ def package_exists(package):
     return package_loader is not None
 
 
+def error_gams_api(message):
+    """
+    Logging error for GAMS api (high or low-level)
+    :param message:     should be set to either lowlevel or gdxcc
+    :return:
+    """
+    if message == 'lowlevel':
+        logging.error(
+            'Could not load the gams low-level api. The gams library is required to run the GAMS versions of '
+            'DARKO. Please install the gams API using: "pip install gamsxcc gdxcc optcc"')
+    elif message == 'gdxcc':
+        logging.critical(
+            'gdxcc module could not be imported from Externals. GDX cannot be produced or read. Please install the '
+            'gams API using: "pip install gamsxcc gdxcc optcc"')
+    sys.exit(1)
+
+
 def import_local_lib(lib):
-    '''
+    """
     Try to import the GAMS api and gdxcc to write gdx files
-    '''
-    # First define the path to the 'Externals' folder. This path must be defined relatively to the current script location
+    """
+    # First define the path to the 'Externals' folder. Must be defined relatively to the current script location
     path_script = os.path.dirname(__file__)
-    path_ext = os.path.join(path_script,'../../Externals')
+    path_ext = os.path.join(path_script, '../../Externals')
 
     if sys.platform == 'win32' and platform.architecture()[0] == '64bit' and sys.version[:3] == '3.7':
-        sys.path.append(os.path.join(path_ext,'gams_api/win64/'))
+        sys.path.append(os.path.join(path_ext, 'gams_api/win64/'))
     else:
-        logging.error('Pre-compiled GAMS libraries are only available for python 3.7 64 bits under windows. You are using platform ' + sys.platform + ' and '
-                      ' architecture ' + platform.architecture()[0] +
-                      'Please install the gams API using: "pip install gamsxcc gdxcc optcc"')
+        logging.error(
+            'Pre-compiled GAMS libraries are only available for python 3.7 64 bits under windows. You are using '
+            'platform ' + sys.platform + ' and ' + platform.architecture()[0] + 'Please install the gams API using: '
+                                                                                '"pip install gamsxcc gdxcc optcc"')
         sys.exit(1)
 
-    if lib == 'gams':
+    if lib == 'lowlevel':
         try:
-            import gams
+            import gdxcc, gamsxcc, optcc
             return True
         except ImportError:
-            logging.error('Could not load the gams high-level api. The gams library is required to run the GAMS versions of DARKO.'
-                          'Please install the gams API using: "python setup.py install" in the gams api folder')
-            sys.exit(1)
-    elif lib == 'lowlevel':
-        try:
-            import gdxcc,gamsxcc,optcc
-            return True
-        except ImportError:
-            logging.error('Could not load the gams low-level api. The gams library is required to run the GAMS versions of DARKO.'
-                          'Please install the gams API using: "pip install gamsxcc gdxcc optcc"')
-            sys.exit(1)
+            error_gams_api(lib)
     elif lib == 'gdxcc':
         try:
             import gdxcc
             return True
         except ImportError:
-            logging.critical("gdxcc module could not be imported from Externals. GDX cannot be produced or read"
-                            'Please install the gams API using: "pip install gamsxcc gdxcc optcc"')
-            sys.exit(1)
-    else:
-        logging.error('Only "gams" and "gdxcc" are present')
+            error_gams_api(lib)
+
 
 if package_exists('gdxcc'):
     import gdxcc
@@ -80,8 +87,6 @@ else:
     logging.warning('Could not import gdxcc. Trying to use pre-compiled libraries')
     if import_local_lib('gdxcc'):
         import gdxcc
-
-#####################
 
 
 def _insert_symbols(gdxHandle, sets, parameters):
@@ -135,8 +140,8 @@ def _insert_symbols(gdxHandle, sets, parameters):
         for i in range(dims):
             if shape[i] != len(sets[variable['sets'][i]]):
                 logging.error(
-                    'Variable ' + p + ': The \'val\' data matrix has ' + str(shape[i]) + 
-                    ' elements for dimention ' + str(variable['sets'][i]) + 
+                    'Variable ' + p + ': The \'val\' data matrix has ' + str(shape[i]) +
+                    ' elements for dimention ' + str(variable['sets'][i]) +
                     ' while there are ' + str(len(variable['sets'])) + ' set values')
                 sys.exit(1)
 
@@ -160,7 +165,6 @@ def _insert_symbols(gdxHandle, sets, parameters):
         gdxcc.gdxDataWriteDone(gdxHandle)
         logging.debug('Parameter ' + p + ' successfully written')
 
-
     logging.debug('Set ' + s + ' successfully written')
 
 
@@ -183,7 +187,7 @@ def write_variables(gams_dir, gdx_out, list_vars):
     gdx_out = force_str(gdx_out)
 
     gdxHandle = gdxcc.new_gdxHandle_tp()
-    gdxcc.gdxCreateD(gdxHandle, gams_dir, gdxcc.GMS_SSSIZE) #it accepts only str type
+    gdxcc.gdxCreateD(gdxHandle, gams_dir, gdxcc.GMS_SSSIZE)  # it accepts only str type
     gdxcc.gdxOpenWrite(gdxHandle, gdx_out, "")
 
     [sets, parameters] = list_vars
@@ -192,7 +196,6 @@ def write_variables(gams_dir, gdx_out, list_vars):
     gdxcc.gdxClose(gdxHandle)
 
     logging.info('Data Successfully written to ' + gdx_out)
-
 
 
 def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
@@ -205,8 +208,6 @@ def gdx_to_list(gams_dir, filename, varname='all', verbose=False):
     :param varname:     In case online one variable is needed, specify it name (otherwise specify 'all')
     :returns:        Dictionary with all the collected values (within lists)
     """
-
-
 
     from gdxcc import gdxSymbolInfo, gdxCreateD, gdxOpenRead, GMS_SSSIZE, gdxDataReadDone, new_gdxHandle_tp, \
         gdxDataReadStr, gdxFindSymbol, gdxErrorStr, gdxDataReadStrStart, gdxGetLastError
@@ -304,7 +305,7 @@ def gdx_to_dataframe(data, fixindex=False, verbose=False):
             elif dim > 3:
                 logging.warning('Variable ' + symbol + ' has more than 2 dimensions, which is very tiring. Skipping')
         else:
-             logging.debug('Variable ' + symbol + ' is empty. Skipping')
+            logging.debug('Variable ' + symbol + ' is empty. Skipping')
     for symbol in out:
         try:
             out[symbol].fillna(value=0, inplace=True)
@@ -357,7 +358,7 @@ def get_gams_path(gams_dir=None):
     import subprocess
     out = None
 
-    #first check if the gams path is defined as environment variable.
+    # first check if the gams path is defined as environment variable.
 
     if "GAMSPATH" in os.environ:
         logging.debug('Using GAMSPATH environmental variable {} '.format(os.environ['GAMSPATH']))
@@ -390,26 +391,28 @@ def get_gams_path(gams_dir=None):
         for path in paths:
             if os.path.exists(path):
                 paths_32 = [path + os.sep + tmp for tmp in os.listdir(path) if
-                          tmp.startswith('win32') and os.path.exists(path + os.sep + tmp)]
+                            tmp.startswith('win32') and os.path.exists(path + os.sep + tmp)]
                 paths_64 = [path + os.sep + tmp for tmp in os.listdir(path) if
-                          tmp.startswith('win64') and os.path.exists(path + os.sep + tmp)]
+                            tmp.startswith('win64') and os.path.exists(path + os.sep + tmp)]
                 for path1 in paths_32:
                     lines_32 = lines_32 + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
-                                     tmp.startswith('24') and os.path.isfile(
-                                         path1 + os.sep + tmp + os.sep + 'gams.exe')]
+                                           tmp.startswith('24') and os.path.isfile(
+                                               path1 + os.sep + tmp + os.sep + 'gams.exe')]
                 for path1 in paths_64:
                     lines_64 = lines_64 + [path1 + os.sep + tmp for tmp in os.listdir(path1) if
-                                     tmp.startswith('24') and os.path.isfile(
-                                         path1 + os.sep + tmp + os.sep + 'gams.exe')]
+                                           tmp.startswith('24') and os.path.isfile(
+                                               path1 + os.sep + tmp + os.sep + 'gams.exe')]
         for line in lines_64:
             if os.path.exists(line):
                 out = line
             break
-        if out is None:    # The 32-bit version of gams should never be preferred
+        if out is None:  # The 32-bit version of gams should never be preferred
             for line in lines_32:
                 if os.path.exists(line):
                     out = line
-                    logging.critical('It seems that the installed version of gams is 32-bit, which might cause consol crashing and compatibility problems. Please consider using GAMS 64-bit')
+                    logging.critical(
+                        'It seems that the installed version of gams is 32-bit, which might cause consol crashing and '
+                        'compatibility problems. Please consider using GAMS 64-bit')
                 break
     elif sys.platform == 'darwin':
         paths = ['/Applications/']

@@ -37,11 +37,10 @@ The advantage of the low level API is that it can easily be installed from pip::
 import os
 import shutil
 import logging
-import time
 
 from .misc.gdx_handler import get_gams_path, import_local_lib, package_exists
 from .misc.gms_handler import solve_high_level, solve_low_level
-from .common import commons
+from .common import commons, set_log_name
 
 
 def is_sim_folder_ok(sim_folder):
@@ -58,16 +57,15 @@ def is_sim_folder_ok(sim_folder):
         logging.error('The provided DARKO simulation environment folder (' + sim_folder + ') does not exist')
         return False
 
-    if not os.path.exists(os.path.join(sim_folder, u'Inputs.gdx')):
-        logging.error(
-            'There is no Inputs.gdx file within the specified DARKO simulation environment folder (' + sim_folder +
-            '). Check that the GDX output is activated in the option file and that no error stated during the '
-            'pre-processing')
-        return False
+    str1 = 'There is no '
+    str2 = ' file within the specified DARKO simulation environment folder (' + sim_folder + ').'
+    str3 = ' Check that the GDX output is activated in the option file and no error is stated during the pre-processing'
 
+    if not os.path.exists(os.path.join(sim_folder, u'Inputs.gdx')):
+        logging.error(str1 + 'Inputs.gdx' + str2 + str3)
+        return False
     if not os.path.exists(os.path.join(sim_folder, u'DARKO.gms')):
-        logging.error(
-            'There is no DARKO.gms file within the specified DARKO simulation environment folder (' + sim_folder + ')')
+        logging.error(str1 + 'DARKO.gms' + str2)
         return False
     return True
 
@@ -110,8 +108,7 @@ def solve_GAMS(sim_folder, gams_folder=None, gams_file='DARKO.gms', result_file=
         ret = solv_func(gams_folder, sim_folder, gams_file, result_file, output_lst=output_lst)
         if os.path.isfile(os.path.join(sim_folder, 'debug.gdx')):
             logging.warning('A debug file was created. There has probably been an optimization error')
-        if os.path.isfile(commons['logfile']):
-            shutil.copy(commons['logfile'], os.path.join(sim_folder, 'warn_solve.log'))
+        set_log_name(sim_folder, 'warn_solve')
         return ret
     else:
         return False
