@@ -328,7 +328,7 @@ EQ_Welfare ..
          TotalWelfare
          =E=
          sum((d,i), AcceptanceRatioOfDemandOrders(d,i)*AvailabilityFactorDemandOrder(d,i)*MaxDemand(d)*PriceDemandOrder(d,i))
-         - sum((u,i), AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)*PriceSimpleOrder(u,i))
+         - sum((u,i), AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)*PriceSimpleOrder(u,i)*OrderType(u,"Simple"))
          - sum((u,i), AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,i)*PowerCapacity(u)*PriceBlockOrder(u))
          - sum((u,i), ClearingStatusOfFlexibleOrder(u,i)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*PriceFlexibleOrder(u))
          - 1000 * sum(s,WaterSlack(s));
@@ -337,12 +337,12 @@ EQ_Welfare ..
 EQ_PowerBalance_1(n,i)..
          NetPositionOfBiddingArea(n,i)
          =E=
-         sum(u, AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)*LocationSupplySide(u,n))
+         sum(u, AcceptanceRatioOfSimpleOrders(u,i)*AvailabilityFactorSimpleOrder(u,i)*PowerCapacity(u)*LocationSupplySide(u,n)*OrderType(u,"Simple"))
          + sum(u, AcceptanceRatioOfBlockOrders(u)*AvailabilityFactorBlockOrder(u,i)*PowerCapacity(u)*LocationSupplySide(u,n))
          + sum(u, ClearingStatusOfFlexibleOrder(u,i)*AvailabilityFactorFlexibleOrder(u)*PowerCapacity(u)*LocationSupplySide(u,n))
          - sum(d, AcceptanceRatioOfDemandOrders(d,i)*AvailabilityFactorDemandOrder(d,i)*MaxDemand(d)*LocationDemandSide(d,n))
-         - sum(s, StorageInput(s,i)*LocationSupplySide(s,n))
-         + sum(s, StorageOutput(s,i)*LocationSupplySide(s,n))
+         - sum(s, StorageInput(s,i)*LocationSupplySide(s,n)*OrderType(s,"Storage"))
+         + sum(s, StorageOutput(s,i)*LocationSupplySide(s,n)*OrderType(s,"Storage"))
 ;
 
 * Net position due to flows between two areas
@@ -655,6 +655,8 @@ OutputClearingStatusOfFlexibleOrder(u,h)
 OutputFlow(l,h)
 * Prices
 OutputMarginalPrice(n,h)
+OutputMarginalPrice_2(n,h)
+OutputMarginalPrice_3(n,h)
 OutputNetPositionOfBiddingArea(n,h)
 OutputTempNetPositionOfBiddingArea(n,h)
 
@@ -671,6 +673,8 @@ OutputAcceptanceRatioOfSimpleOrders(u,z) = AcceptanceRatioOfSimpleOrders.L(u,z);
 OutputClearingStatusOfFlexibleOrder(u,z) = ClearingStatusOfFlexibleOrder.L(u,z);
 OutputFlow(l,z) = Flow.L(l,z);
 OutputMarginalPrice(n,z) = EQ_PowerBalance_1.m(n,z);
+OutputMarginalPrice_2(n,z) = EQ_PowerBalance_2.m(n,z);
+OutputMarginalPrice_3(n,z) = EQ_PowerBalance_3.m(n,z);
 OutputNetPositionOfBiddingArea(n,z) = NetPositionOfBiddingArea.L(n,z);
 OutputTempNetPositionOfBiddingArea(n,z) = TemporaryNetPositionOfBiddingArea.L(n,z);
 
@@ -688,6 +692,8 @@ OutputClearingStatusOfBlockOrder,
 OutputClearingStatusOfFlexibleOrder,
 OutputFlow,
 OutputMarginalPrice,
+OutputMarginalPrice_2,
+OutputMarginalPrice_3,
 OutputNetPositionOfBiddingArea,
 OutputTempNetPositionOfBiddingArea,
 OutputTotalWelfare,

@@ -138,12 +138,12 @@ def build_simulation(config):
                                    fallbacks=['Unit'],
                                    tablename='AvailabilityFactorsDemandOrder',
                                    default=0)
-    AFSimpleOrder = UnitBasedTable(plants, config['QuantitySimpleOrder'],
+    AFSimpleOrder = UnitBasedTable(plants.loc[plants['OrderType'] == 'Simple'], config['QuantitySimpleOrder'],
                                    idx_std, config['zones'],
                                    fallbacks=['Unit', 'Technology'],
                                    tablename='AvailabilityFactorsSimpleOrder',
                                    default=0)
-    AFBlockOrder = UnitBasedTable(plants, config['QuantityBlockOrder'],
+    AFBlockOrder = UnitBasedTable(plants.loc[plants['OrderType']=='Block'], config['QuantityBlockOrder'],
                                   idx_std, config['zones'],
                                   fallbacks=['Unit', 'Technology'],
                                   tablename='AvailabilityFactorsBlockOrder',
@@ -155,7 +155,7 @@ def build_simulation(config):
                                       fallbacks=['Unit'],
                                       tablename='PriceDemandOrder',
                                       default=0)
-    PriceSimpleOrder = UnitBasedTable(plants, config['PriceSimpleOrder'],
+    PriceSimpleOrder = UnitBasedTable(plants.loc[plants['OrderType']=='Simple'], config['PriceSimpleOrder'],
                                       idx_std, config['zones'],
                                       fallbacks=['Unit', 'Technology'],
                                       tablename='PriceSimpleOrder',
@@ -173,7 +173,7 @@ def build_simulation(config):
     MaxDemand = demands.groupby(['Zone'])['MaxDemand'].agg('sum')
     # Adjust to the fraction of max total demand
     NodeDailyRamp = (NodeDailyRamp.T * MaxDemand * 24 * config['HorizonLength']).T
-    NodeDailyRamp.reset_index(inplace=True)
+    NodeDailyRamp = NodeDailyRamp.reindex(config['zones'])
 
     # Hourly node based ramping rates
     NodeHourlyRampUp = NodeBasedTable(config['NodeHourlyRampUp'], idx_std,
@@ -208,7 +208,7 @@ def build_simulation(config):
                                  index=['LineDailyRampUp', 'LineDailyRampDown']).T
     # Adjust to the fraction of max total demand
     LineDailyRamp = (LineDailyRamp.T * ntc.max() * 24 * config['HorizonLength']).T
-    LineDailyRamp.reset_index(inplace=True)
+    LineDailyRamp = LineDailyRamp.reindex(ntc.columns)
 
     # Interconnection ramping rates
     LineHourlyRampUp = NodeBasedTable(config['LineHourlyRampUp'], idx_std,
@@ -223,8 +223,8 @@ def build_simulation(config):
 
     # data checks:
     check_AvailabilityFactorsDemands(demands, AFDemandOrder)
-    check_AvailabilityFactorsUnits(plants, AFSimpleOrder)
-    check_AvailabilityFactorsUnits(plants, AFBlockOrder)
+    check_AvailabilityFactorsUnits(plants.loc[plants['OrderType'] == 'Simple'], AFSimpleOrder)
+    check_AvailabilityFactorsUnits(plants.loc[plants['OrderType'] == 'Block'], AFBlockOrder)
 
     # Interconnections:
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], ntc, flows)
