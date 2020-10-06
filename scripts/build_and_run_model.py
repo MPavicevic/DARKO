@@ -14,6 +14,7 @@ This script runs the DARKO model. The main steps are:
 import os
 import sys
 import pandas as pd
+import matplotlib.pyplot as plt
 
 # Import Dispa-SET
 import darko as dk
@@ -21,7 +22,7 @@ import darko as dk
 sys.path.append(os.path.abspath('..'))
 
 # Load the configuration file
-config = dk.load_config_excel('../ConfigFiles/ConfigBorna.xlsx')
+config = dk.load_config_excel('../ConfigFiles/ConfigTest.xlsx')
 
 # Limit the simulation period (for testing purposes, comment the line to run the range from the config file)
 # config['StartDate'] = (2016, 1, 1, 0, 0, 0)

@@ -19,10 +19,9 @@ from .data_check import check_units, check_sto, check_demands, check_MinMaxFlows
 # isStorage
 from .data_handler import load_csv, UnitBasedTable, NodeBasedTable, define_parameter
 from .utils import incidence_matrix, select_units, select_demands, interconnections
-
 from .. import __version__
-from ..misc.gdx_handler import write_variables, gdx_to_list, gdx_to_dataframe
 from ..common import commons, set_log_name  # Load fuel types, technologies, timestep, etc:
+from ..misc.gdx_handler import write_variables
 
 GMS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'GAMS')
 
@@ -39,8 +38,8 @@ def build_simulation(config):
     darko_version = __version__
     logging.info('New build started. DARKO version: ' + darko_version)
     # %%###############################################################################################################
-    #####################################   Main Inputs    ############################################################
-    ###################################################################################################################
+    # ###################################   Main Inputs    ############################################################
+    # #################################################################################################################
 
     # Day/hour corresponding to the first and last days of the simulation:
     # Note that the first available data corresponds to 2015.01.31 (23.00) and the
@@ -59,14 +58,14 @@ def build_simulation(config):
 
     # Indexes for the whole year considered in StartDate
     idx_utc_year_noloc = pd.DatetimeIndex(pd.date_range(
-                                          start=dt.datetime(*(config['StartDate'][0], 1, 1, 0, 0)),
-                                          end=dt.datetime(*(config['StartDate'][0], 12, 31, 23, 59, 59)),
-                                          freq=commons['TimeStep'])
-                                         )
+        start=dt.datetime(*(config['StartDate'][0], 1, 1, 0, 0)),
+        end=dt.datetime(*(config['StartDate'][0], 12, 31, 23, 59, 59)),
+        freq=commons['TimeStep'])
+    )
 
     # %%###############################################################################################################
-    #####################################   Data Loading    ###########################################################
-    ###################################################################################################################
+    # ###################################   Data Loading    ###########################################################
+    # #################################################################################################################
 
     # Start and end of the simulation:
     delta = idx_utc[-1] - idx_utc[0]
@@ -87,7 +86,7 @@ def build_simulation(config):
     # fill missing parameters with 0
     plants[['PriceBlockOrder', 'PriceFlexibleOrder', 'AccaptanceBlockOrdersMin', 'AvailabilityFactorFlexibleOrder']] = \
         plants[['PriceBlockOrder', 'PriceFlexibleOrder', 'AccaptanceBlockOrdersMin', 'AvailabilityFactorFlexibleOrder']
-        ].fillna(0)
+               ].fillna(0)
     # Rename parameters
     plants.rename(columns={'RampUp': 'UnitRampUp', 'RampDown': 'UnitRampDown'}, inplace=True)
     # Fill missing parameters with 1
@@ -143,7 +142,7 @@ def build_simulation(config):
                                    fallbacks=['Unit', 'Technology'],
                                    tablename='AvailabilityFactorsSimpleOrder',
                                    default=0)
-    AFBlockOrder = UnitBasedTable(plants.loc[plants['OrderType']=='Block'], config['QuantityBlockOrder'],
+    AFBlockOrder = UnitBasedTable(plants.loc[plants['OrderType'] == 'Block'], config['QuantityBlockOrder'],
                                   idx_std, config['zones'],
                                   fallbacks=['Unit', 'Technology'],
                                   tablename='AvailabilityFactorsBlockOrder',
@@ -155,7 +154,7 @@ def build_simulation(config):
                                       fallbacks=['Unit'],
                                       tablename='PriceDemandOrder',
                                       default=0)
-    PriceSimpleOrder = UnitBasedTable(plants.loc[plants['OrderType']=='Simple'], config['PriceSimpleOrder'],
+    PriceSimpleOrder = UnitBasedTable(plants.loc[plants['OrderType'] == 'Simple'], config['PriceSimpleOrder'],
                                       idx_std, config['zones'],
                                       fallbacks=['Unit', 'Technology'],
                                       tablename='PriceSimpleOrder',
@@ -291,17 +290,10 @@ def build_simulation(config):
     NodeHourlyRampDown = NodeHourlyRampDown.reindex(idx_long, method='nearest').fillna(method='bfill')
     ReservoirLevels = ReservoirLevels.reindex(idx_long, method='nearest').fillna(method='bfill')
     ReservoirScaledInflows = ReservoirScaledInflows.reindex(idx_long, method='nearest').fillna(method='bfill')
-    #    for key in FuelPrices:
-    #        FuelPrices[key] = FuelPrices[key].reindex(idx_long, method='nearest').fillna(method='bfill')
-    #    ReservoirLevels_merged = ReservoirLevels_merged.reindex(idx_long, method='nearest').fillna(method='bfill')
-    #    ReservoirScaledInflows_merged = ReservoirScaledInflows_merged.reindex(idx_long, method='nearest').fillna(
-    #        method='bfill')
-    ##    for tr in Renewables:
-    ##        Renewables[tr] = Renewables[tr].reindex(idx_long, method='nearest').fillna(method='bfill')
-    #
+
     # %%###############################################################################################################
-    ############################################   Sets    ############################################################
-    ###################################################################################################################
+    # ##########################################   Sets    ############################################################
+    # #################################################################################################################
 
     # The sets are defined within a dictionary:
     sets = {'d': demands['Unit'].tolist(),
@@ -318,9 +310,9 @@ def build_simulation(config):
             'sk': commons['Sectors']
             }
 
-    ###################################################################################################################
-    ############################################   Parameters    ######################################################
-    ###################################################################################################################
+    # %%###############################################################################################################
+    # ##########################################   Parameters    ######################################################
+    # #################################################################################################################
 
     Nunits = len(plants)
     Ndems = len(demands)
@@ -364,11 +356,11 @@ def build_simulation(config):
                   'StorageChargingEfficiency': ['s'],
                   'StorageDischargeEfficiency': ['s'],
                   'StorageSelfDischarge': ['s'],
-                  'StorageInflow': ['s','h'],
+                  'StorageInflow': ['s', 'h'],
                   'StorageInitial': ['s'],
                   'StorageMinimum': ['s'],
                   'StorageOutflow': ['s', 'h'],
-                  'StorageProfile': ['s','h']
+                  'StorageProfile': ['s', 'h']
                   }
 
     # Define all the parameters and set a default value of zero:
@@ -412,11 +404,6 @@ def build_simulation(config):
         if u in PriceSimpleOrder.columns:
             parameters['PriceSimpleOrder']['val'][i, :] = PriceSimpleOrder[u]
 
-    #    # List of parameters whose value is not necessarily specified in the dataframe Plants_merged
-    #    for var in ['Nunits']:
-    #        if var in Plants_merged:
-    #            parameters[var]['val'] = Plants_merged[var].values
-
     # List of parameters whose value is known, and provided in the dataframe Plants_sto.
     for var in ['StorageCapacity', 'StorageChargingCapacity', 'StorageChargingEfficiency', 'StorageSelfDischarge']:
         parameters[var]['val'] = plants_sto[var].values
@@ -426,10 +413,10 @@ def build_simulation(config):
 
     # Storage profile and initial state:
     for i, s in enumerate(sets['s']):
-        if s in ReservoirLevels and any(ReservoirLevels[s] > 0) and all(ReservoirLevels[s] -1 <= 1e-11):
+        if s in ReservoirLevels and any(ReservoirLevels[s] > 0) and all(ReservoirLevels[s] - 1 <= 1e-11):
             # get the time series
             parameters['StorageProfile']['val'][i, :] = ReservoirLevels[s][idx_long].values
-        elif s in ReservoirLevels and any(ReservoirLevels[s] > 0) and any(ReservoirLevels[s] -1 > 1e-11):
+        elif s in ReservoirLevels and any(ReservoirLevels[s] > 0) and any(ReservoirLevels[s] - 1 > 1e-11):
             logging.critical(s + ': The reservoir level is sometimes higher than its capacity (>1) !')
             sys.exit(1)
         else:
@@ -445,9 +432,6 @@ def build_simulation(config):
         # The initial level is the same as the first value of the profile:
         parameters['StorageInitial']['val'][i] = parameters['StorageProfile']['val'][i, 0] * \
                                                  plants_sto.loc[plants_sto['Unit'] == s]['StorageCapacity']
-                                                 # plants_sto['StorageCapacity'][s]
-                                                 # finalTS['AvailabilityFactors'][s][idx_long[0]] * \
-                                                 # * plants_sto['Nunits'][s]
 
     # Storage Inflows:
     for i, s in enumerate(sets['s']):
@@ -455,7 +439,8 @@ def build_simulation(config):
             parameters['StorageInflow']['val'][i, :] = ReservoirScaledInflows[s][idx_long].values * \
                                                        plants_sto.loc[plants_sto['Unit'] == s]['PowerCapacity'].values
 
-    # %%#################################################################################################################################################################################################
+    # %%################################################################################################################
+    # #################################################################################
 
     # Maximum Line Capacity
     for i, l in enumerate(sets['l']):
@@ -523,8 +508,8 @@ def build_simulation(config):
     parameters['Config'] = {'sets': ['x_config', 'y_config'], 'val': values}
 
     # %%###############################################################################################################
-    ######################################   Simulation Environment     ###############################################
-    ###################################################################################################################
+    # ####################################   Simulation Environment     ###############################################
+    # #################################################################################################################
 
     # Output folder:
     sim = config['SimulationDirectory']
@@ -541,7 +526,6 @@ def build_simulation(config):
                'version': darko_version
                }
 
-    # list_vars = []
     gdx_out = "Inputs.gdx"
     if config['WriteGDX']:
         write_variables(config['GAMS_folder'], gdx_out, [sets, parameters])
@@ -554,22 +538,9 @@ def build_simulation(config):
 
     if not os.path.exists(sim):
         os.makedirs(sim)
-    #    if LP:
-    #        fin = open(os.path.join(GMS_FOLDER, 'UCM_h.gms'))
-    #        fout = open(os.path.join(sim,'UCM_h.gms'), "wt")
-    #        for line in fin:
-    #            fout.write(line.replace('$setglobal LPFormulation 0', '$setglobal LPFormulation 1'))
-    #        fin.close()
-    #        fout.close()
-    #        # additionally allso copy UCM_h_simple.gms
-    #        shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-    #                        os.path.join(sim, 'UCM_h_simple.gms'))
-    #    else:
+
     shutil.copyfile(os.path.join(GMS_FOLDER, 'DARKO.gms'),
                     os.path.join(sim, 'DARKO.gms'))
-    # additionally allso copy UCM_h_simple.gms
-    #    shutil.copyfile(os.path.join(GMS_FOLDER, 'UCM_h_simple.gms'),
-    #                    os.path.join(sim, 'UCM_h_simple.gms'))
     gmsfile = open(os.path.join(sim, 'DARKO.gpr'), 'w')
     gmsfile.write(
         '[PROJECT] \n \n[RP:DARKO] \n1= \n[OPENWINDOW_1] \nFILE0=DARKO.gms \nFILE1=DARKO.gms \nMAXIM=1 \nTOP=50 '

@@ -4,6 +4,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+import re
 
 from ..misc.gdx_handler import get_gams_path, gdx_to_dataframe, gdx_to_list
 from ..misc.str_handler import clean_strings
@@ -114,10 +115,13 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False,
     keys_sparse = ['OutputFlow', 'OutputAcceptanceRatioOfDemandOrders', 'OutputAcceptanceRatioOfSimpleOrders',
                    'OutputClearingStatusOfFlexibleOrder',
                    'OutputNetPositionOfBiddingArea', 'OutputTempNetPositionOfBiddingArea',
-                   'OutputStorageInput', 'OutputStorageOutput', 'OutputStorageLevel', 'OutputStorageMarginalPrice']
+                   'OutputStorageInput', 'OutputStorageOutput', 'OutputStorageLevel', 'OutputStorageMarginalPrice',
+                   'OutputMarginalPrice_2', 'OutputMarginalPrice_3',
+                   'OutputSystemCost', 'OutputClearedDemand', 'OutputClearedSimple', 'OutputClearedBlock',
+                   'OutputClearedFlexible']
 
     keys_iteration = ['OutputAcceptanceRatioOfBlockOrders', 'OutputClearingStatusOfBlockOrder', 'OutputTotalWelfare',
-                      'OutputDailyNetPositionOfBiddingArea']
+                      'OutputDailyNetPositionOfBiddingArea', 'OutputWaterslack']
 
     # Setting the proper index to the result dataframes:
     from itertools import chain
@@ -176,7 +180,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False,
                 logging.warning(df_name + ': Has no output, variable is probably not used within the model, if not '
                                           'sure check the Results.gdx file')
             else:
-                df_name = df_name.replace("Output", "")
+                df_name = re.sub(r'\bOutput', '', df_name)
                 df.to_excel(writer, sheet_name=df_name)
         writer.save()
 
