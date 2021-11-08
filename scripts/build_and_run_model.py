@@ -16,10 +16,11 @@ import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Import Dispa-SET
-import darko as dk
 # Automatically set absolute path to the working directory (..DARKO/)
 sys.path.append(os.path.abspath('..'))
+
+# Import DARKO model
+import darko as dk
 
 # Load the configuration file
 config = dk.load_config_excel('../ConfigFiles/ConfigTest.xlsx')
