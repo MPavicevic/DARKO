@@ -52,5 +52,6 @@ Main developers
 Currently the main developers of the DARKO package are the following:
 
 - Matija Pavičević  (KU Leuven, Belgium)
+- Marijke Woestenburg 
 
 
