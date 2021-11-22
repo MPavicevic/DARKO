@@ -143,7 +143,7 @@ def get_sim_results(path='.', cache=None, temp_path=None, return_xarray=False,
     # Include water slack in the results (only one number)
     for key in keys_iteration:
         if key in results:
-            results[key] = results[key]
+            results[key] = results[key].reindex(range(1,len(index_sim)+1), fill_value=0)
             results[key].index = index_sim
         else:
             results[key] = 0

@@ -43,7 +43,7 @@ setup(
         "click >= 3.3",
         "numpy >= 1.12",
         "pandas >= 0.19",
-        "xlrd >= 0.9",
+        "xlrd == 1.2",
         "matplotlib >= 1.5.1",
         "gdxcc >= 7",
         "gamsxcc",
