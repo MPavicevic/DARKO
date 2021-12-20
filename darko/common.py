@@ -11,9 +11,9 @@ commons = {}
 commons['TimeStep'] = '1h'
 # Technologies
 commons['Technologies'] = ['HOBO', 'HEPU', 'ELHE', 'SOTH', 'GETH', 'WSHE', 'THMS', 'STUR', 'GTUR', 'COMC', 'ICEN',
-                           'SCSP']
+                           'SCSP', 'WTON', 'WTOF', 'PHOT']
 # List of renewable technologies:
-commons['tech_renewables'] = ['SOTH', 'GETH', 'WSHE', 'SCSP']
+commons['tech_renewables'] = ['SOTH', 'GETH', 'WSHE', 'SCSP', 'WTON', 'WTOF', 'PHOT']
 # List of storage technologies:
 commons['tech_storage'] = ['THMS']
 # List of CHP types:

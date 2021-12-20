@@ -86,10 +86,10 @@ NodeDailyRampDown(n)                     [%\24h\n] Node daily ramp up limit
 NodeInitial(n)
 
 * Prices
-PriceDemandOrder(d,h)                    [€\MW]   Price ofer of the consumer d in time period h
-PriceSimpleOrder(u,h)                    [€\MW]   Price ofer of the simple order u in time period h
-PriceBlockOrder(u)                       [€\MW]   Default block order price
-PriceFlexibleOrder(u)                    [€\MW]   Default block order price
+PriceDemandOrder(d,h)                    [EUR\MW]   Price ofer of the consumer d in time period h
+PriceSimpleOrder(u,h)                    [EUR\MW]   Price ofer of the simple order u in time period h
+PriceBlockOrder(u)                       [EUR\MW]   Default block order price
+PriceFlexibleOrder(u)                    [EUR\MW]   Default block order price
 
 * Interconection lines
 LineNode(l,n)                            [n.a.]    Incidence matrix       {-1 +1}
@@ -303,26 +303,25 @@ EQ_Blockorder_ub                                 define uper bound on block orde
 EQ_Flexibleorder                                 define flexible order constraints
 EQ_Flow_limits_ub                                define upper limit on flows between zones
 EQ_Flow_limits_lb                                define lower limit on flows between zones
-EQ_Flow_hourly_ramp_up
-EQ_Flow_hourly_ramp_down
-EQ_Flow_daily_ramp_up
-EQ_Flow_daily_ramp_down
-EQ_Node_hourly_ramp_up
-EQ_Node_hourly_ramp_down
-EQ_Node_daily_ramp_up
-EQ_Node_daily_ramp_down
-EQ_DailyNetPositionOfBiddingArea
-EQ_NetPositionRamp
-EQ_Unit_Ramp_Up
-EQ_Unit_Ramp_Down
-EQ_Storage_minimum
-EQ_Storage_level
-EQ_Storage_input
-EQ_Storage_output
-EQ_Storage_MaxDischarge
-EQ_Storage_MaxCharge
-EQ_Storage_balance
-EQ_Storage_boundaries
+EQ_Flow_hourly_ramp_up                           define hourly ramp up limits inside the lines
+EQ_Flow_hourly_ramp_down                         define hourly ramp down limits inside the lines
+EQ_Flow_daily_ramp_up                            define the daily ramp up limits inside the lines
+EQ_Flow_daily_ramp_down                          define the daily ramp down limits inside the lines
+EQ_Node_hourly_ramp_up                           define the hourly price ramp up limits inside the nodes
+EQ_Node_hourly_ramp_down                         define the hourly price ramp down limits inside the nodes
+EQ_Node_daily_ramp_up                            define the daily price ramp up limits inside the nodes
+EQ_Node_daily_ramp_down                          define the daily price ramp up limits inside the nodes
+EQ_DailyNetPositionOfBiddingArea                 define the daily net position of the biding area
+EQ_Unit_Ramp_Up                                  define the hourly ramp up limits of simple orders
+EQ_Unit_Ramp_Down                                define the hourly ramp down limits of simple orders
+EQ_Storage_minimum                               define the minimum state of the charge of the storage technologies
+EQ_Storage_level                                 define the state of the charge of the storage technologies
+EQ_Storage_input                                 define the storage input
+EQ_Storage_output                                define the storage output
+EQ_Storage_MaxDischarge                          define the maximum storage discharge rate
+EQ_Storage_MaxCharge                             define the maximum storage charge rate
+EQ_Storage_balance                               define the storage balance
+EQ_Storage_boundaries                            define the operational boundaries for storage units
 ;
 
 * Thourly system costs
@@ -472,14 +471,14 @@ EQ_Unit_Ramp_Up(u,i)$(sum(tr,Technology(u,tr))=0)..
          AcceptanceRatioOfSimpleOrders(u,i) * AvailabilityFactorSimpleOrder(u,i) * PowerCapacity(u)
          - AcceptanceRatioOfSimpleOrders(u,i-1)$(ord(i) > 1) * AvailabilityFactorSimpleOrder(u,i-1)$(ord(i) > 1) * PowerCapacity(u)
          =L=
-         UnitRampUp(u) * PowerCapacity(u)
+         UnitRampUp(u) * 60 * PowerCapacity(u)
 ;
 
 EQ_Unit_Ramp_Down(u,i)$(sum(tr,Technology(u,tr))=0)..
          - AcceptanceRatioOfSimpleOrders(u,i) * AvailabilityFactorSimpleOrder(u,i) * PowerCapacity(u)
          + AcceptanceRatioOfSimpleOrders(u,i-1)$(ord(i) > 1) * AvailabilityFactorSimpleOrder(u,i-1)$(ord(i) > 1) * PowerCapacity(u)
          =L=
-         UnitRampDown(u) * PowerCapacity(u)
+         UnitRampDown(u) * 60 * PowerCapacity(u)
 ;
 
 * Storage Related Equations
