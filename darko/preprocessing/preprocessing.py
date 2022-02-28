@@ -169,21 +169,6 @@ def build_simulation(config):
                                        default=config['default']['NodeDailyRampDown'])
     NodeDailyRamp = pd.DataFrame([NodeDailyRampUp.iloc[0], NodeDailyRampDown.iloc[0]],
                                  index=['NodeDailyRampUp', 'NodeDailyRampDown']).T
-    MaxDemand = demands.groupby(['Zone'])['MaxDemand'].agg('sum')
-    # Adjust to the fraction of max total demand
-    NodeDailyRamp = (NodeDailyRamp.T * MaxDemand * 24 * config['HorizonLength']).T
-    NodeDailyRamp = NodeDailyRamp.reindex(config['zones'])
-
-    # Hourly node based ramping rates
-    NodeHourlyRampUp = NodeBasedTable(config['NodeHourlyRampUp'], idx_std,
-                                      config['zones'], tablename='NodeHourlyRampUp',
-                                      default=config['default']['NodeHourlyRampUp'])
-    NodeHourlyRampDown = NodeBasedTable(config['NodeHourlyRampDown'], idx_std,
-                                        config['zones'], tablename='NodeHourlyRampDown',
-                                        default=config['default']['NodeHourlyRampDown'])
-    # Adjust to the fraction of max capacity
-    NodeHourlyRampUp = NodeHourlyRampUp * MaxDemand
-    NodeHourlyRampDown = NodeHourlyRampDown * MaxDemand
 
     # Interconnections:
     if os.path.isfile(config['Interconnections']):
@@ -220,6 +205,38 @@ def build_simulation(config):
     LineHourlyRampUp = LineHourlyRampUp * ntc.max()
     LineHourlyRampDown = LineHourlyRampDown * ntc.max()
 
+    # Adjust fraction of the max demand + max NTC
+    ntc_daily = pd.DataFrame(index=config['zones'])
+    ntc_daily['FlowIn'] = 0
+    ntc_daily['FlowOut'] = 0
+    ntc_hourly = pd.DataFrame(0, columns=config['zones'], index=idx_std)
+    for z in config['zones']:
+        for col in LineDailyRamp.index:
+            from_node, to_node = col.split('->')
+            if to_node.strip() == z:
+                ntc_daily['FlowIn'] = ntc_daily['FlowIn'] + LineDailyRamp.loc[col,'LineDailyRampUp']
+                ntc_hourly[z] = ntc_hourly[z] + LineHourlyRampUp.loc[:,col]
+            if from_node.strip() == z:
+                ntc_daily['FlowOut'] = ntc_daily['FlowOut'] - LineDailyRamp.loc[col,'LineDailyRampUp']
+
+    MaxDemand = demands.groupby(['Zone'])['MaxDemand'].agg('sum') + ntc_daily['FlowIn']
+
+
+    # Adjust to the fraction of max total demand
+    NodeDailyRamp = (NodeDailyRamp.T * MaxDemand * 24 * config['HorizonLength']).T
+    NodeDailyRamp = NodeDailyRamp.reindex(config['zones'])
+
+    # Hourly node based ramping rates
+    NodeHourlyRampUp = NodeBasedTable(config['NodeHourlyRampUp'], idx_std,
+                                      config['zones'], tablename='NodeHourlyRampUp',
+                                      default=config['default']['NodeHourlyRampUp'])
+    NodeHourlyRampDown = NodeBasedTable(config['NodeHourlyRampDown'], idx_std,
+                                        config['zones'], tablename='NodeHourlyRampDown',
+                                        default=config['default']['NodeHourlyRampDown'])
+    # Adjust to the fraction of max capacity
+    NodeHourlyRampUp = NodeHourlyRampUp * MaxDemand
+    NodeHourlyRampDown = NodeHourlyRampDown * MaxDemand
+
     # data checks:
     check_AvailabilityFactorsDemands(demands, AFDemandOrder)
     check_AvailabilityFactorsUnits(plants.loc[plants['OrderType'] == 'Simple'], AFSimpleOrder)
@@ -229,9 +246,9 @@ def build_simulation(config):
     [Interconnections_sim, Interconnections_RoW, Interconnections] = interconnections(config['zones'], ntc, flows)
 
     if len(Interconnections_sim.columns) > 0:
-        ntcs = Interconnections_sim.reindex(idx_std)
+        ntc_daily = Interconnections_sim.reindex(idx_std)
     else:
-        ntcs = pd.DataFrame(index=idx_std)
+        ntc_daily = pd.DataFrame(index=idx_std)
     Inter_RoW = Interconnections_RoW.reindex(idx_std)
 
     # %%
@@ -251,7 +268,7 @@ def build_simulation(config):
     # Interconnections
     check_df(Inter_RoW, StartDate=idx_std[0], StopDate=idx_std[-1],
              name='Inter_RoW')
-    check_df(ntcs, StartDate=idx_std[0], StopDate=idx_std[-1],
+    check_df(ntc_daily, StartDate=idx_std[0], StopDate=idx_std[-1],
              name='NTCs')
     # Line ramping rates
     check_df(LineHourlyRampUp, StartDate=idx_std[0], StopDate=idx_std[-1],
@@ -283,7 +300,7 @@ def build_simulation(config):
     PriceDemandOrder = PriceDemandOrder.reindex(idx_long, method='nearest').fillna(method='bfill')
     PriceSimpleOrder = PriceSimpleOrder.reindex(idx_long, method='nearest').fillna(method='bfill')
     Inter_RoW = Inter_RoW.reindex(idx_long, method='nearest').fillna(method='bfill')
-    ntcs = ntcs.reindex(idx_long, method='nearest').fillna(method='bfill')
+    ntc_daily = ntc_daily.reindex(idx_long, method='nearest').fillna(method='bfill')
     LineHourlyRampUp = LineHourlyRampUp.reindex(idx_long, method='nearest').fillna(method='bfill')
     LineHourlyRampDown = LineHourlyRampDown.reindex(idx_long, method='nearest').fillna(method='bfill')
     NodeHourlyRampUp = NodeHourlyRampUp.reindex(idx_long, method='nearest').fillna(method='bfill')
@@ -385,7 +402,9 @@ def build_simulation(config):
         if var in ['NodeDailyRampUp', 'NodeDailyRampDown']:
             parameters[var]['val'] = NodeDailyRamp[var].values
         if var in ['LineDailyRampUp', 'LineDailyRampDown']:
-            parameters[var]['val'] = LineDailyRamp[var].values
+            for i, l in enumerate(sets['l']):
+                if l in ntc_daily.columns:
+                    parameters[var]['val'][i] = LineDailyRamp.loc[l,var]
 
     # List of parameters whose value is known, and provided in the availability factors.
     for i, d in enumerate(sets['d']):
@@ -444,8 +463,8 @@ def build_simulation(config):
 
     # Maximum Line Capacity
     for i, l in enumerate(sets['l']):
-        if l in ntcs.columns:
-            parameters['FlowMaximum']['val'][i, :] = ntcs[l]
+        if l in ntc_daily.columns:
+            parameters['FlowMaximum']['val'][i, :] = ntc_daily[l]
         if l in Inter_RoW.columns:
             parameters['FlowMaximum']['val'][i, :] = Inter_RoW[l]
             parameters['FlowMinimum']['val'][i, :] = Inter_RoW[l]

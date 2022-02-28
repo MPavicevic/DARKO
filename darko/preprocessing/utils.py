@@ -11,6 +11,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+import math
 
 from ..misc.str_handler import clean_strings, shrink_to_64
 from ..common import commons
@@ -66,8 +67,8 @@ def select_demands(demands, config):
     for dem in demands.index:
         # Default strings
         str1 = 'Removed Demand ' + str(demands.loc[dem, 'Unit'])
-        if demands.loc[dem, 'MaxDemand'] == 0:
-            logging.warning(str1 + ' since it has a null capacity')
+        if math.isnan(demands.loc[dem, 'MaxDemand']):
+            logging.warning(str1 + ' since it has a nan capacity')
             demands.drop(dem, inplace=True)
         elif demands.loc[dem, 'Zone'] not in config['zones']:
             logging.warning(str1 + ' since its zone (' + str(demands.loc[dem, 'Zone']) + ') is not in the list of zones')
