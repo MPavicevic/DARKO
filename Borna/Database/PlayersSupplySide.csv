@@ -1,0 +1,8 @@
+,PowerCapacity,Unit,Zone,Sector,Technology,Fuel,RampUp,RampDown,Efficiency,CO2Intensity,OrderType,PriceBlockOrder,PriceFlexibleOrder,AccaptanceBlockOrdersMin,AvailabilityFactorFlexibleOrder,StorageCapacity,StorageSelfDischarge,StorageChargingCapacity,StorageChargingEfficiency
+Z1_HOBO_GAS_1,8,Z1_HOBO_GAS_1,Z1,IND,HOBO,GAS,1,1,0.92,,Block,32.13,,0.35,,,,,
+Z1_HOBO_GAS_2,44,Z1_HOBO_GAS_2,Z1,IND,HOBO,GAS,1,1,0.92,,Block,31.58,,0.35,,,,,
+Z1_CHP_BIO,12,Z1_CHP_BIO,Z1,IND,HOBO,BIO,1,1,0.67,,Simple,,,,,,,,
+Z1_TS_NET,0.565,Z1_TS_NET,Z1,IND,THMS,OTH,,,0.86,,Storage,,,,,1.13,0,0.565,0.86
+Z2_TS_NET,1.235,Z2_TS_NET,Z2,IND,THMS,OTH,1,1,0.969,,Storage,,,,,2.47,0,1.235,0.969
+Z3_HOBO_GAS,11,Z3_HOBO_GAS,Z3,IND,HOBO,GAS,1,1,0.9,,Block,31.58,,0.35,,,,,
+Z3_TS_NET,0.21,Z3_TS_NET,Z3,IND,THMS,OTH,1,1,0.969,,Storage,,,,,0.42,0,0.21,0.969

@@ -1,0 +1,16 @@
+Input=E:\Projects\Github\DARKO\Simulations\simulationBorna\DARKO.gms
+Output=E:\Projects\Github\DARKO\Simulations\simulationBorna\DARKO.lst
+Action=R
+SubSys=C:\GAMS\win64\24.4\gmscmpnt.txt
+ScrDir=E:\Projects\Github\DARKO\scripts\225a\
+SysDir=C:\GAMS\win64\24.4\
+CurDir=E:\Projects\Github\DARKO\scripts\
+WorkDir=E:\Projects\Github\DARKO\Simulations\simulationBorna\
+PutDir=E:\Projects\Github\DARKO\Simulations\simulationBorna\
+GridDir=E:\Projects\Github\DARKO\scripts\225a\
+ScriptNext=225a\gamsnext.cmd
+ScriptFrst="@echo off"
+LogOption=3
+AppendOut=1
+LibIncDir=C:\GAMS\win64\24.4\inclib\
+SysIncDir=C:\GAMS\win64\24.4\

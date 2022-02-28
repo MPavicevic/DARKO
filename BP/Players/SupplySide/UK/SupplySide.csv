@@ -1,0 +1,2 @@
+,PowerCapacity,Unit,Zone,Sector,Technology,Fuel,Efficiency,RampUp,RampDown,CO2Intensity,OrderType,PriceBlockOrder,PriceFlexibleOrder,AccaptanceBlockOrdersMin,AvailabilityFactorFlexibleOrder,StorageCapacity,StorageSelfDischarge,StorageChargingCapacity,StorageChargingEfficiency
+UK Market,3997,UK Market,UK,IND,COMC,GAS,1,1,1,1,Simple,,,,,,,,

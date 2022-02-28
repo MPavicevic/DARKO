@@ -1,0 +1,3 @@
+[console_scripts]
+darko = darko.cli:cli
+

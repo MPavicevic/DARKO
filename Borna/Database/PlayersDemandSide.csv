@@ -1,0 +1,4 @@
+,Unit,Zone,Sector,MaxDemand
+Z1_D1,Z1_D1,Z1,IND,9.8
+Z2_D1,Z2_D1,Z2,REZ,54
+Z3_D1,Z3_D1,Z3,REZ,11

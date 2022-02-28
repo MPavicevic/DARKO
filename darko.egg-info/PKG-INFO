@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: darko
+Version: 0.0.post61+g12f9bfa
+Summary: Day-ahead Market Optimization
+Home-page: https://github.com/MPavicevic/DARKO
+Author: Matija Pavičević
+Author-email: matija.pavicevic@kuleuven.be
+License: EUPL v1.2
+Keywords: day-ahead market,energy systems analysis,optimization
+Platform: UNKNOWN
+Classifier: Intended Audience :: Science/Research
+Classifier: Programming Language :: Python
+License-File: LICENSE.md
+
+UNKNOWN
+

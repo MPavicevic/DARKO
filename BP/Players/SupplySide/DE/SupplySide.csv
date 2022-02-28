@@ -1,0 +1,2 @@
+,PowerCapacity,Unit,Zone,Sector,Technology,Fuel,Efficiency,RampUp,RampDown,CO2Intensity,OrderType,PriceBlockOrder,PriceFlexibleOrder,AccaptanceBlockOrdersMin,AvailabilityFactorFlexibleOrder,StorageCapacity,StorageSelfDischarge,StorageChargingCapacity,StorageChargingEfficiency
+DE Market,4630,DE Market,DE,IND,COMC,GAS,1,1,1,1,Simple,,,,,,,,

@@ -45,4 +45,6 @@ dk.plot_net_positions(dk.get_net_position_plot_data(inputs, results, z='BE'))
 
 # Plot Market Clearing Price
 # mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1'])), rng=rng)
-mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1', 'Z2'])))
+#mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1', 'Z2'])))
+
+dk.Energy_by_fuel_graph(inputs,results,rng)
