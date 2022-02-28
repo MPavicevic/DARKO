@@ -10,6 +10,7 @@ import logging
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import sys
 
 from ..common import commons
 from .data_handler import dk_to_df
@@ -368,3 +369,92 @@ def get_market_clearing_data(inputs, results, zone, time):
     plt.xlabel("Quantity $q$")
     plt.ylabel("Price")
     plt.show()
+
+def aggregate_by_fuel(PowerOutput, Inputs, SpecifyFuels=None):
+    """
+    This function sorts the power generation curves of the different units by technology
+
+    :param PowerOutput:     Dataframe of power generationwith units as columns and time as index
+    :param Inputs:          Dispaset inputs version 2.1.1
+    :param SpecifyFuels:     If not all fuels should be considered, list containing the relevant ones
+    :returns PowerByFuel:    Dataframe with power generation by fuel
+    """
+    if SpecifyFuels is None:
+        if isinstance(Inputs, list):
+            fuels = Inputs[0]['f']
+        elif isinstance(Inputs, dict):
+            fuels = Inputs['sets']['f']
+        else:
+            logging.error('Inputs variable no valid')
+            sys.exit(1)
+    else:
+        fuels = SpecifyFuels
+    PowerByFuel = pd.DataFrame(0, index=PowerOutput.index, columns=fuels)
+    uFuel = Inputs['units']['Fuel']
+
+    uFuel.index = Inputs['units']['Unit']
+
+    for u in PowerOutput:
+        if uFuel[u] in fuels:
+            PowerByFuel[uFuel[u]] = PowerByFuel[uFuel[u]] + PowerOutput[u]
+        else:
+            logging.warning('Fuel not found for unit ' + u + ' with fuel ' + uFuel[u])
+
+    return PowerByFuel
+
+def Energy_by_fuel_graph(inputs,results,rng=None):
+
+    import matplotlib.patches as mpatches
+    import matplotlib.lines as mlines
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    from darko import commons
+
+    aa = aggregate_by_fuel(results["OutputClearedSimple"], inputs)
+    pd.plotting.register_matplotlib_converters()
+
+    if rng is None:
+        pdrng = aa.index[:(len(aa))]
+    elif not type(rng) == type(aa.index):
+        raise ValueError()
+    elif rng[0] < aa.index[0] or rng[0] > aa.index[0] or rng[0] < aa.index[0] or rng[0] > \
+            aa.index[0]:
+        pdrng = aa.index[:(len(aa))]
+    else:
+        pdrng = rng
+
+    cols = aa.columns.tolist()
+    idx_zero = 0
+    sumplot_pos = aa[cols[idx_zero:]].cumsum(axis=1)
+    sumplot_pos['zero'] = 0
+    sumplot_pos = sumplot_pos[['zero'] + sumplot_pos.columns[:-1].tolist()]
+
+    figsize = (13, 5)
+    fig, axes = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
+                             gridspec_kw={'height_ratios': [2.7], 'hspace': 0.04})
+
+    # Define labels, patches and colors
+    labels = []
+    patches = []
+    colorlist = []
+
+    # Plot Positive values:
+    for j in range(len(sumplot_pos.columns) - 1):
+        col1 = sumplot_pos.columns[j]
+        col2 = sumplot_pos.columns[j + 1]
+
+        color = commons['colors'][col2]
+        hatch = commons['hatches'][col2]
+        axes.fill_between(pdrng, sumplot_pos.loc[pdrng, col1], sumplot_pos.loc[pdrng, col2], facecolor=color,
+                          alpha=0.7)
+        labels.append(col2)
+        patches.append(mpatches.Patch(facecolor=color, alpha=0.7, hatch=hatch, label=col2))
+        colorlist.append(color)
+
+    axes.set_xlabel('Date')
+    axes.set_ylabel('Energy [MWh]')
+    plt.title('Energy per Fuel')
+    plt.legend(aa, bbox_to_anchor=(1.1, 0.9))
+    plt.show()
+    return aa
+

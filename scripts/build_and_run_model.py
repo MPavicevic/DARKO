@@ -23,7 +23,7 @@ sys.path.append(os.path.abspath('..'))
 import darko as dk
 
 # Load the configuration file
-config = dk.load_config_excel('../ConfigFiles/ConfigTest.xlsx')
+config = dk.load_config_excel('../ConfigFiles/ConfigBP.xlsx')
 
 # Limit the simulation period (for testing purposes, comment the line to run the range from the config file)
 # config['StartDate'] = (2016, 1, 1, 0, 0, 0)
@@ -39,10 +39,12 @@ r = dk.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 inputs, results = dk.get_sim_results(config['SimulationDirectory'], cache=False)
 
 # Plot Net Positions
-rng = pd.date_range('2016-1-1', '2016-1-5', freq='h')
+rng = pd.date_range('2016-7-3', '2016-7-5', freq='h')
 # dk.plot_net_positions(dk.get_net_position_plot_data(inputs,results,z='Z2'),rng=rng)
-dk.plot_net_positions(dk.get_net_position_plot_data(inputs, results, z='Z1'))
+#dk.plot_net_positions(dk.get_net_position_plot_data(inputs, results, z='BE'))
 
 # Plot Market Clearing Price
 # mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1'])), rng=rng)
-mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1', 'Z2'])))
+#mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1', 'Z2'])))
+
+dk.Energy_by_fuel_graph(inputs,results,rng)
