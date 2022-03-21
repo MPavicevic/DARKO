@@ -272,6 +272,9 @@ def plot_market_clearing_price(data, rng=None, alpha=0.7, figsize=(10, 7.5)):
 
     axes[0].set_ylabel('MCP [EUR/MWh]')
     axes[0].set_title('Market Clearing Price in ' + listToString(mcp.columns))
+    labels = data[0].columns
+    axes[0].legend(labels=labels, loc="upper right", bbox_to_anchor=(1.12, 0.1))
+
     axes[0].axhline(linewidth=1, color='gray')
     axes[0].grid(True)
     axes[1].set_title('Traded volume in ' + listToString(mcp.columns))
@@ -293,6 +296,8 @@ def plot_market_clearing_price(data, rng=None, alpha=0.7, figsize=(10, 7.5)):
     axes[0].set_xlabel('MCP Bins [EUR/MWh]')
     axes[0].set_ylabel('Frequency')
     axes[0].set_title('MCP and volume histograms in ' + listToString(mcp.columns))
+    labels = data[0].columns
+    axes[0].legend(labels=labels, loc="upper right", bbox_to_anchor=(1.12, 0))
     axes[0].grid(True)
 
     axes[1].set_xlabel('Traded Volume Bins [MWh]')
@@ -323,7 +328,7 @@ def plot_market_clearing_price(data, rng=None, alpha=0.7, figsize=(10, 7.5)):
             ax.set_title('Market Clearing Price in ' + i)
             j = j + 1
     labels = ['MCP', 'min', 'max', 'mean', 'baseline']
-    plt.legend(handles, labels, loc='center left', bbox_to_anchor=(1.02, 0.8))
+    plt.legend(handles, labels, loc='center left', bbox_to_anchor=(1.02, 0.6))
     plt.show()
 
     # Candle plot
@@ -457,4 +462,3 @@ def Energy_by_fuel_graph(inputs,results,rng=None):
     plt.legend(aa, bbox_to_anchor=(1.1, 0.9))
     plt.show()
     return aa
-
