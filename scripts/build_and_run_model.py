@@ -49,7 +49,7 @@ rng = pd.date_range('2020-1-1', '2020-1-5', freq='h')
 
 #dk.Energy_by_fuel_graph(inputs,results,rng)
 
-def Ishimoku(inputs, results, rng=None):
+def Ichimoku(inputs, results, rng=None):
 
     import matplotlib.patches as mpatches
     import matplotlib.lines as mlines
@@ -132,26 +132,27 @@ def Ishimoku(inputs, results, rng=None):
     tmp = d.loc[:, ['Senkou Span A', 'Senkou Span B', 'Kijun Sen', 'Tenkan Sen', 'Chikou Span']].tail(300)
     tmp = tmp.reset_index()
 
-    x1=tmp['index'].values
-    y1=tmp['Senkou Span A'].values
-    y2=tmp['Senkou Span B'].values
+    x1 = tmp['index'].values
+    y1 = tmp['Senkou Span A'].values
+    y2 = tmp['Senkou Span B'].values
 
     tmp.plot(x='index', y='Senkou Span A', ax=axes, kind='line', color='green', alpha=0.7)
     tmp.plot(x='index', y='Senkou Span B', ax=axes, kind='line', color='red', alpha=0.7)
-    axes.fill_between(x1, y1, y2, where=y2 > y1, facecolor='green')
-    axes.fill_between(x1, y1, y2, where=y1 > y2, facecolor='red')
+    axes.fill_between(x1, y1, y2, where=y2 > y1, facecolor='red')
+    axes.fill_between(x1, y1, y2, where=y1 > y2, facecolor='green')
 
     tmp.plot(x='index', y='Tenkan Sen', ax=axes, kind='line', color='blue', alpha=0.2)
     tmp.plot(x='index', y='Kijun Sen', ax=axes, kind='line', color='purple', alpha=0.2)
     tmp.plot(x='index', y='Chikou Span', ax=axes, kind='line', color='orange', alpha=0.3)
 
+
     # Add titles
     axes.set_ylabel('MCP [EUR/MWh]')
     axes.set_xlabel('Date\n')
-    axes.set_title('Ishimoku for the Belgian market\n', fontweight='bold')
+    axes.set_title('Ichimoku for the Belgian market\n', fontweight='bold')
 
     # Display everything
     plt.show()
 
 
-dk.Ishimoku(inputs, results, rng)
+dk.Ichimoku(inputs, results, rng)
