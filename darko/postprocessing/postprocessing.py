@@ -354,13 +354,13 @@ def get_market_clearing_data(inputs, results, zone, time):
               inputs['param_df']['AvailabilityFactorDemandOrder'].columns.isin(list(
                   inputs['demands'].loc[inputs['demands']['Zone'] == zone].index))]
     vol_dem.index = results['OutputMarginalPrice'].index
-    price_dem =  inputs['param_df']['PriceDemandOrder'].loc[:,
+    price_dem = inputs['param_df']['PriceDemandOrder'].loc[:,
                  inputs['param_df']['PriceDemandOrder'].columns.isin(list(
                      inputs['demands'].loc[inputs['demands']['Zone'] == zone].index))]
     price_dem.index = results['OutputMarginalPrice'].index
 
     def lspc(price, volume):
-        return np.linspace(price,price,volume).T
+        return np.linspace(price, price, volume).T
 
     aa = pd.DataFrame()
     for z in vol_dem.columns:
@@ -462,3 +462,125 @@ def Energy_by_fuel_graph(inputs,results,rng=None):
     plt.legend(aa, bbox_to_anchor=(1.1, 0.9))
     plt.show()
     return aa
+
+
+def Ichimoku(inputs, results, rng=None, z=None):
+
+    import matplotlib.patches as mpatches
+    import matplotlib.lines as mlines
+    import matplotlib.pyplot as plt
+    import pandas as pd
+
+    mcp, vol, price, price_cstc = get_marginal_price_plot_data(inputs, results, zones=['BE', 'DE', 'NL', 'UK'])
+    mcp_min = mcp.groupby(pd.Grouper(freq='D')).min()
+    mcp_max = mcp.groupby(pd.Grouper(freq='D')).max()
+    mcp_mean = mcp.groupby(pd.Grouper(freq='D')).mean()
+    mcp_open = mcp.between_time('00:00:00', '00:00:30')
+    mcp_close = mcp.between_time('23:00:00', '23:00:30')
+
+    prices = {}
+    #for z in inputs['sets']['n']:
+    prices[z] = pd.DataFrame()
+    prices[z].loc[:, 'open'] = mcp_open.loc[:, z]
+    prices[z].loc[:, 'close'] = mcp_close.loc[:, z].values
+    prices[z].loc[:, 'high'] = mcp_max.loc[:, z]
+    prices[z].loc[:, 'low'] = mcp_min.loc[:, z]
+
+    if rng is None:
+        pdrng = prices[z].index[:min(len(prices[z]) - 1, 7 * 24)]
+    elif not type(rng) == type(prices[z].index):
+        logging.error('The "rng" variable must be a pandas DatetimeIndex')
+        raise ValueError()
+    elif rng[0] < prices[z].index[0] or rng[0] > prices[z].index[-1] or rng[-1] < prices[z].index[0] or rng[-1] > \
+            prices[z].index[-1]:
+        logging.warning('Plotting range is not properly defined, considering the first simulated week')
+        pdrng = prices[z].index[:min(len(prices[z]) - 1, 7 * 24)]
+    else:
+        pdrng = rng
+
+    #prices[z] = prices[z].loc[pdrng, :]
+    pd.plotting.register_matplotlib_converters()
+
+    # create figure
+    plt.figure()
+
+    figsize = (9, 6)
+    fig1, axes = plt.subplots(figsize=figsize, frameon=True)
+    # define width of candlestick elements
+    width = .4
+    width2 = 0.05
+
+    # define up and down prices
+    up = prices[z][prices[z].close >= prices[z].open]
+    down = prices[z][prices[z].close < prices[z].open]
+    up_index = up.index.intersection(pdrng)
+    down_index = down.index.intersection(pdrng)
+
+    up=up.loc[up_index, :]
+    down = down.loc[down_index, :]
+
+    # define colors to use
+    col1 = 'green'
+    col2 = 'red'
+
+    # plot up prices
+    axes.bar(up.index, up.close - up.open, width, bottom=up.open, color=col1)
+    axes.bar(up.index, up.high - up.close, width2, bottom=up.close, color=col1)
+    axes.bar(up.index, up.low - up.open, width2, bottom=up.open, color=col1)
+
+    # plot down prices
+    axes.bar(down.index, down.close - down.open, width, bottom=down.open, color=col2)
+    axes.bar(down.index, down.high - down.open, width2, bottom=down.open, color=col2)
+    axes.bar(down.index, down.low - down.close, width2, bottom=down.close, color=col2)
+
+    # rotate x-axis tick labels
+    #axes.set_xticklabels(rotation=45, ha='right', )
+
+    d = pd.DataFrame()
+
+    # Tenkan-sen (Conversion Line): (9-period high + 9-period low)/2))
+    period9_high = prices[z]['high'].rolling(window=9, center=True, min_periods=1).mean()
+    period9_low = prices[z]['low'].rolling(window=9, center=True, min_periods=1).mean()
+    d['Tenkan Sen'] = (period9_high + period9_low) / 2
+
+    # Kijun-sen (Base Line): (26-period high + 26-period low)/2))
+    period26_high = prices[z]['high'].rolling(center=True, min_periods=1, window=26).mean()
+    period26_low = prices[z]['low'].rolling(center=True, min_periods=1, window=26).mean()
+    d['Kijun Sen'] = (period26_high + period26_low) / 2
+
+    # Senkou Span A (Leading Span A): (Conversion Line + Base Line)/2))
+    d['Senkou Span A'] = ((d['Tenkan Sen'] + d['Kijun Sen']) / 2).shift(26)
+
+    # Senkou Span B (Leading Span B): (52-period high + 52-period low)/2))
+    period52_high = prices[z]['high'].rolling(center=True, min_periods=1, window=52).mean()
+    period52_low = prices[z]['low'].rolling(center=True, min_periods=1, window=52).mean()
+    d['Senkou Span B'] = ((period52_high + period52_low) / 2).shift(26)
+
+    # The most current closing price plotted 22 time periods behind
+    d['Chikou Span'] = prices[z]['close'].shift(-22)
+
+    tmp = d.loc[pdrng, ['Senkou Span A', 'Senkou Span B', 'Kijun Sen', 'Tenkan Sen', 'Chikou Span']]
+    tmp = tmp.reset_index()
+
+    x1 = tmp['index'].values
+    y1 = tmp['Senkou Span A'].values
+    y2 = tmp['Senkou Span B'].values
+
+    tmp.plot(x='index', y='Senkou Span A', ax=axes, kind='line', color='green', alpha=0.7)
+    tmp.plot(x='index', y='Senkou Span B', ax=axes, kind='line', color='red', alpha=0.7)
+    axes.fill_between(x1, y1, y2, where=y2 > y1, facecolor='red', alpha=0.7)
+    axes.fill_between(x1, y1, y2, where=y1 > y2, facecolor='green', alpha=0.7)
+
+    tmp.plot(x='index', y='Tenkan Sen', ax=axes, kind='line', color='blue', alpha=0.2)
+    tmp.plot(x='index', y='Kijun Sen', ax=axes, kind='line', color='purple', alpha=0.2)
+    tmp.plot(x='index', y='Chikou Span', ax=axes, kind='line', color='orange', alpha=0.3)
+
+
+    # Add titles
+    axes.set_ylabel('MCP [EUR/MWh]')
+    axes.set_xlabel('Date\n')
+    axes.set_title('Ichimoku\n', fontweight='bold')
+
+
+    # Display everything
+    plt.show()

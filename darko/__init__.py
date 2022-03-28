@@ -9,7 +9,7 @@ from ._version import __version__
 from .preprocessing.data_handler import load_config_excel
 from .preprocessing.preprocessing import build_simulation
 from .postprocessing.postprocessing import plot_net_positions, get_net_position_plot_data, plot_market_clearing_price, \
-    get_marginal_price_plot_data, aggregate_by_fuel, Energy_by_fuel_graph
+    get_marginal_price_plot_data, aggregate_by_fuel, Energy_by_fuel_graph, Ichimoku
 
 # Importing the main DARKO solve functions
 from .solve import solve_GAMS
