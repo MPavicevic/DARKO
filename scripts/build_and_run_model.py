@@ -30,21 +30,25 @@ config = dk.load_config_excel('../ConfigFiles/ConfigBP.xlsx')
 # config['StopDate'] = (2016, 1, 7, 0, 0, 0)
 
 # Build the simulation environment:
-SimData = dk.build_simulation(config)
+#SimData = dk.build_simulation(config)
 
 # Solve using GAMS:
-r = dk.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
+#r = dk.solve_GAMS(config['SimulationDirectory'], config['GAMS_folder'])
 
 # Load the simulation results:
 inputs, results = dk.get_sim_results(config['SimulationDirectory'], cache=False)
 
+# Load range
+rng = pd.date_range('2020-1-1', '2020-1-5', freq='h')
+
 # Plot Net Positions
-rng = pd.date_range('2016-1-1', '2016-1-5', freq='h')
 # dk.plot_net_positions(dk.get_net_position_plot_data(inputs,results,z='Z2'),rng=rng)
 dk.plot_net_positions(dk.get_net_position_plot_data(inputs, results, z='BE'))
 
 # Plot Market Clearing Price
-# mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1'])), rng=rng)
-#mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1', 'Z2'])))
+#mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1'])), rng=rng)
+mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['BE', 'DE', 'NL', 'UK'])), alpha=0.7)
 
 dk.Energy_by_fuel_graph(inputs,results,rng)
+
+dk.Ichimoku(inputs, results, rng=pd.date_range('2020-1-1', '2020-1-31', freq='D'), z="BE")
