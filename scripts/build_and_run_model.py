@@ -39,16 +39,20 @@ config = dk.load_config_excel('../ConfigFiles/ConfigBP.xlsx')
 inputs, results = dk.get_sim_results(config['SimulationDirectory'], cache=False)
 
 # Load range
-rng = pd.date_range('2020-1-1', '2020-1-5', freq='h')
+rng = pd.date_range('2020-2-1', '2020-3-31', freq='h')
 
 # Plot Net Positions
-# dk.plot_net_positions(dk.get_net_position_plot_data(inputs,results,z='Z2'),rng=rng)
-dk.plot_net_positions(dk.get_net_position_plot_data(inputs, results, z='BE'))
+#dk.plot_net_positions(dk.get_net_position_plot_data(inputs,results,z='Z2'),rng=rng)
+#dk.plot_net_positions(dk.get_net_position_plot_data(inputs, results, z='BE'))
 
 # Plot Market Clearing Price
 #mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['Z1'])), rng=rng)
-mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['BE', 'DE', 'NL', 'UK'])), alpha=0.7)
+#mcp, vol = dk.plot_market_clearing_price((dk.get_marginal_price_plot_data(inputs, results, zones=['BE', 'DE', 'NL', 'UK'])), alpha=0.7)
 
-dk.Energy_by_fuel_graph(inputs,results,rng)
+# Plot dispatch plot
+dk.Energy_by_fuel_graph(inputs,results,rng=rng)
+# Plot renewable energy - MCP plots
+dk.renewable_plots(inputs, results, rng=rng, z="BE")
+# Plot Ichimoku plot
+dk.Ichimoku(inputs, results, rng=rng, z="BE")
 
-dk.Ichimoku(inputs, results, rng=pd.date_range('2020-1-1', '2020-1-31', freq='D'), z="BE")

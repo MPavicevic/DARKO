@@ -575,12 +575,61 @@ def Ichimoku(inputs, results, rng=None, z=None):
     tmp.plot(x='index', y='Kijun Sen', ax=axes, kind='line', color='purple', alpha=0.2)
     tmp.plot(x='index', y='Chikou Span', ax=axes, kind='line', color='orange', alpha=0.3)
 
-
     # Add titles
     axes.set_ylabel('MCP [EUR/MWh]')
     axes.set_xlabel('Date\n')
     axes.set_title('Ichimoku\n', fontweight='bold')
 
-
     # Display everything
+    plt.show()
+
+def renewable_plots(inputs, results, rng=None, z=None):
+    # Make a scatter plot for MCP in function of % of renewables
+    # Get data in the right format
+    aa = aggregate_by_fuel(results["OutputClearedSimple"], inputs, )
+    renewable = aa["BIO"] + aa["SUN"] + aa["WAT"] + aa["WIN"]
+    totaal = aa.sum(axis=1)
+    renewable100 = (renewable / totaal) * 100
+    prijs = results['OutputMarginalPrice'].loc[:, z]
+
+    # Create figure
+    figsize = (13, 5)
+    fig, axes = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=figsize, frameon=True,  # 14 4*2
+                             gridspec_kw={'height_ratios': [2.7], 'hspace': 0.04})
+    # Plot the data and formatting
+    plt.scatter(prijs, renewable100, cmap='winter', alpha=0.4)
+    axes.set_xlabel('MCP')
+    axes.set_ylabel('% Renewables')
+    axes.set_ylim(0, 100)
+    plt.title('Effect of renewables on the MCP')
+    plt.show()
+
+    # Make a violin plot per portion renewable energy used
+    # Get data in the right format, create bins
+    totaldata = pd.concat([prijs, renewable100], axis=1)
+    totaldata.columns = ["Zone", "% renewable"]
+    categories = ['0-10%', '10-20%', '20-30%', '30-40%', '40-50%', '50-60%', '60-70%', '70-80%', '80-90%', '90-100%']
+    Grouped, bins = pd.cut(totaldata["% renewable"], bins=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100], retbins=True,
+                           labels=categories)
+    PriceAndGroup = pd.concat([Grouped, prijs], axis=1)
+
+    maxprice = PriceAndGroup.max()
+
+    # Create figure
+    plt.figure(figsize=(13, 8))
+    plt.suptitle('Influence of renewables on MCP')
+
+    # Use a for loop to go through all bins and create a violin plot per bin.
+    groups = []
+    for i in range(len(categories)):
+        Collection = PriceAndGroup[PriceAndGroup["% renewable"] == str(categories[i])]
+        if len(Collection):
+            Collection = Collection.iloc[:, 1]
+
+            # Plotting and formatting
+            ax = plt.subplot(2, 5, i + 1)
+            ax.violinplot(Collection, showmedians=True, showextrema=True)
+            ax.set_title(categories[i])
+            ax.set_ylim(0, maxprice["BE"] + 10)
+
     plt.show()
